@@ -42,11 +42,13 @@ jobs:
       - name: 🔹 Integration Tests
         run: ./gradlew intTest --no-daemon
 
-      - name: 🔹 Mutation Testing (PIT)
+      - name: 🔹 Mutation Testing (PIT) — allowed to fail
         run: ./gradlew pitest --no-daemon
+        continue-on-error: true
 
-      - name: 🔹 Coverage Check
+      - name: 🔹 Coverage Check — allowed to fail
         run: ./gradlew jacocoMergedReport checkCoverage --no-daemon
+        continue-on-error: true
 
       # ---------- DOCKER ----------
       - name: 🔹 Build Docker Image

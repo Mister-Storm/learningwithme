@@ -160,18 +160,21 @@ tasks.named("pitest") {
                 .file("reports/pitest/index.html")
                 .get()
                 .asFile
-        if (!file.exists()) throw GradleException("PIT report not found")
+        if (!file.exists()) throw GradleException("❌ PIT report not found!")
 
-        val survived =
+        val mutationCoverage =
             file
                 .readText()
-                .substringAfter("Survived: ")
-                .substringBefore("</span>")
+                .substringAfter("Mutation Coverage")
+                .substringAfter(">")
+                .substringBefore("%")
                 .trim()
                 .toInt()
 
-        if (survived > 25) {
-            throw GradleException("❌ Mais de 25% dos mutantes sobreviveram ($survived%)")
+        if (mutationCoverage <= 75) {
+            throw GradleException("❌ Mais de 25% dos mutantes sobreviveram (coverage = $mutationCoverage%)")
+        } else {
+            println("✅ Mutation coverage OK ($mutationCoverage%)")
         }
     }
 }
