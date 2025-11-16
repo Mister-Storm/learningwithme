@@ -10,7 +10,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
 @SpringBootTest
-class LearningwithmeApplicationTests {
+class LearningwithmeApplicationIT {
     companion object {
         @Container
         val postgres: PostgreSQLContainer<*> =

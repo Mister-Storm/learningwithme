@@ -1,9 +1,13 @@
+import org.gradle.testing.jacoco.tasks.JacocoReport
+
 plugins {
     kotlin("jvm") version "1.9.25"
     kotlin("plugin.spring") version "1.9.25"
     id("org.springframework.boot") version "3.5.7"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
+    id("jacoco")
+    id("info.solidsoft.pitest") version "1.15.0"
 }
 
 group = "br.com.learningwithme"
@@ -29,8 +33,10 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.springframework.modulith:spring-modulith-starter-core:1.3.0")
     implementation("org.springframework.modulith:spring-modulith-starter-jdbc")
+
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     runtimeOnly("org.postgresql:postgresql")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.mockito", module = "mockito-core")
     }
@@ -61,3 +67,93 @@ kotlin {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+sourceSets {
+    create("intTest") {
+        java.srcDir("src/intTest/kotlin")
+        resources.srcDir("src/intTest/resources")
+        compileClasspath += sourceSets["main"].output + sourceSets["test"].output
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+configurations {
+    named("intTestImplementation") {
+        extendsFrom(configurations["testImplementation"])
+    }
+    named("intTestRuntimeOnly") {
+        extendsFrom(configurations["testRuntimeOnly"])
+    }
+}
+
+tasks.register<Test>("intTest") {
+    description = "Runs integration tests."
+    group = "verification"
+    testClassesDirs = sourceSets["intTest"].output.classesDirs
+    classpath = sourceSets["intTest"].runtimeClasspath
+    useJUnitPlatform()
+}
+
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.register<JacocoReport>("jacocoMergedReport") {
+    dependsOn("test", "intTest")
+
+    executionData(
+        layout.buildDirectory.file("jacoco/test.exec").get().asFile,
+        layout.buildDirectory.file("jacoco/intTest.exec").get().asFile
+    )
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+
+    sourceSets(sourceSets["main"])
+}
+
+
+tasks.register("checkCoverage") {
+    dependsOn("jacocoMergedReport")
+    doLast {
+        val report = layout.buildDirectory.file("reports/jacoco/jacocoMergedReport/xml/report.xml").get().asFile
+        val coverage = report.readText().substringAfter("line-rate=\"")
+            .substringBefore("\"").toDouble()
+
+        if (coverage < 0.75) {
+            throw GradleException("❌ Cobertura unitária abaixo de 75% ($coverage)")
+        }
+    }
+}
+
+/** ----------------------------------------------------
+ *  🔹 PIT mutation testing
+ * ----------------------------------------------------*/
+pitest {
+    junit5PluginVersion.set("1.2.1")
+    targetClasses.set(listOf("br.com.learningwithme.*"))
+    testStrengthThreshold.set(75)
+    mutationThreshold.set(75)
+    coverageThreshold.set(75)
+    failWhenNoMutations.set(true)
+}
+
+tasks.named("pitest") {
+    doLast {
+        val file = layout.buildDirectory.file("reports/pitest/index.html").get().asFile
+        if (!file.exists()) throw GradleException("PIT report not found")
+
+        val survived = file.readText()
+            .substringAfter("Survived: ")
+            .substringBefore("</span>")
+            .trim()
+            .toInt()
+
+        if (survived > 25) {
+            throw GradleException("❌ Mais de 25% dos mutantes sobreviveram ($survived%)")
+        }
+    }
+}
+
