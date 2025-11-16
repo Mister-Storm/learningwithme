@@ -14,8 +14,8 @@ class CreateUserUseCase(
     private val publisher: UserEventProducer,
 ) : UseCase<CreateUserCommand, UserCreatedResponse>() {
     override fun invoke(input: CreateUserCommand): UserCreatedResponse {
-        val email = Email(input.email)
-        userRepository.findByEmail(email.value)?.let {
+        Email.isValid(input.email)
+        userRepository.findByEmail(input.email)?.let {
             throw EmailAlreadyExistsException()
         }
         return input

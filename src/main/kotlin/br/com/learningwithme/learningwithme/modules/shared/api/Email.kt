@@ -5,7 +5,13 @@ value class Email(
     val value: String,
 ) {
     init {
-        require(value.isNotEmpty()) { "Email cannot be empty" }
-        require(value.contains("@")) { "Invalid email" }
+        isValid(value)
+    }
+
+    companion object {
+        fun isValid(email: String) {
+            require(email.isNotEmpty()) { "Email cannot be empty" }
+            require(email.contains("@")) { "Invalid email" }
+        }
     }
 }
