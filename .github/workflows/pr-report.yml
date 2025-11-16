@@ -1,0 +1,34 @@
+name: PR Coverage Report
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Reports
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-reports
+
+      - name: Create PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          message: |
+            ## 📊 Coverage & Mutation Report
+            ### 🔹 JaCoCo Coverage
+            ✔ Relatório HTML disponível como artifact  
+            🚨 Cobertura mínima exigida: **70%**  
+            
+            ### 🧬 PIT Mutation
+            ✔ Mutação executada  
+            ⚠ Pode falhar sem bloquear PR  
+
+            ### 📁 Artifacts
+            👉 **Baixe aqui no menu lateral do PR**  
