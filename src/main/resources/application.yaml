@@ -1,3 +1,8 @@
 spring:
   application:
     name: learningwithme
+  datasource:
+    url: jdbc:postgresql://localhost:5432/learningwithme
+    username: root
+    password: password
+    driver-class-name: org.postgresql.Driver
