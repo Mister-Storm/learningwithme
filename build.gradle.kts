@@ -1,4 +1,5 @@
 import org.gradle.testing.jacoco.tasks.JacocoReport
+import java.time.Instant
 
 plugins {
     kotlin("jvm") version "1.9.25"
@@ -60,7 +61,7 @@ dependencyManagement {
 
 kotlin {
     compilerOptions {
-        freeCompilerArgs.addAll("-Xjsr305=strict")
+        freeCompilerArgs.add("-Xjsr305=strict")
     }
 }
 
@@ -98,18 +99,23 @@ jacoco {
     toolVersion = "0.8.12"
 }
 
+pitest {
+    junit5PluginVersion.set("1.2.1")
+    targetClasses.set(listOf("br.com.learningwithme.*"))
+    mutators.set(listOf("STRONGER"))
+    outputFormats.set(listOf("XML", "HTML"))
+    mutationThreshold.set(76)
+    coverageThreshold.set(75)
+    failWhenNoMutations.set(false)
+}
+
 tasks.register<JacocoReport>("jacocoMergedReport") {
+
     dependsOn("test", "intTest")
 
     executionData(
-        layout.buildDirectory
-            .file("jacoco/test.exec")
-            .get()
-            .asFile,
-        layout.buildDirectory
-            .file("jacoco/intTest.exec")
-            .get()
-            .asFile,
+        layout.buildDirectory.file("jacoco/test.exec"),
+        layout.buildDirectory.file("jacoco/intTest.exec"),
     )
 
     reports {
@@ -121,60 +127,98 @@ tasks.register<JacocoReport>("jacocoMergedReport") {
 }
 
 tasks.register("checkCoverage") {
+
     dependsOn("jacocoMergedReport")
+
     doLast {
-        val report =
+        val xmlReport =
             layout.buildDirectory
                 .file("reports/jacoco/jacocoMergedReport/xml/report.xml")
                 .get()
                 .asFile
-        val coverage =
-            report
+
+        if (!xmlReport.exists()) throw GradleException("❌ JaCoCo XML report not found")
+
+        val coverageLineRate =
+            xmlReport
                 .readText()
                 .substringAfter("line-rate=\"")
                 .substringBefore("\"")
                 .toDouble()
 
-        if (coverage < 0.75) {
-            throw GradleException("❌ Cobertura unitária abaixo de 75% ($coverage)")
+        val percent = (coverageLineRate * 100).toInt()
+
+        println("📊 JaCoCo coverage = $percent%")
+
+        if (percent < 75) {
+            throw GradleException("❌ Cobertura abaixo de 75% ($percent%)")
         }
     }
 }
 
-/** ----------------------------------------------------
- *  🔹 PIT mutation testing
- * ----------------------------------------------------*/
-pitest {
-    junit5PluginVersion.set("1.2.1")
-    targetClasses.set(listOf("br.com.learningwithme.*"))
-    testStrengthThreshold.set(75)
-    mutationThreshold.set(75)
-    coverageThreshold.set(75)
-    failWhenNoMutations.set(true)
+tasks.register("writeCoverageSnapshot") {
+
+    dependsOn("jacocoMergedReport")
+
+    doLast {
+        val xmlReport =
+            layout.buildDirectory
+                .file("reports/jacoco/jacocoMergedReport/xml/report.xml")
+                .get()
+                .asFile
+
+        if (!xmlReport.exists()) throw GradleException("JaCoCo XML not found!")
+
+        val percent =
+            (
+                xmlReport
+                    .readText()
+                    .substringAfter("line-rate=\"")
+                    .substringBefore("\"")
+                    .toDouble() * 100
+            ).toInt()
+
+        val branch = System.getenv("GITHUB_REF_NAME") ?: "local"
+        val timestamp = Instant.now().epochSecond
+
+        val historyFile = layout.projectDirectory.file(".ci-history/history.json").asFile
+        historyFile.parentFile.mkdirs()
+
+        historyFile.appendText("""{"branch":"$branch","timestamp":$timestamp,"coverage":$percent}""" + "\n")
+
+        println("📁 Saved coverage snapshot in ${historyFile.path}")
+    }
 }
 
-tasks.named("pitest") {
+tasks.register("writePitSnapshot") {
+
+    dependsOn("pitest")
+
     doLast {
-        val file =
+        val pitHtml =
             layout.buildDirectory
                 .file("reports/pitest/index.html")
                 .get()
                 .asFile
-        if (!file.exists()) throw GradleException("❌ PIT report not found!")
+        val outDir = layout.projectDirectory.file(".ci-history").asFile
+        outDir.mkdirs()
+        val outFile = outDir.resolve("pit-summary.json")
 
         val mutationCoverage =
-            file
-                .readText()
-                .substringAfter("Mutation Coverage")
-                .substringAfter(">")
-                .substringBefore("%")
-                .trim()
-                .toInt()
+            if (pitHtml.exists()) {
+                pitHtml
+                    .readText()
+                    .substringAfter("Mutation Coverage")
+                    .substringAfter(">")
+                    .substringBefore("%")
+                    .trim()
+                    .toIntOrNull()
+            } else {
+                null
+            }
 
-        if (mutationCoverage <= 75) {
-            throw GradleException("❌ Mais de 25% dos mutantes sobreviveram (coverage = $mutationCoverage%)")
-        } else {
-            println("✅ Mutation coverage OK ($mutationCoverage%)")
-        }
+        outFile.writeText("""{"mutationCoverage":$mutationCoverage}""")
+
+        println("📁 Saved PIT snapshot in ${outFile.path}")
     }
 }
