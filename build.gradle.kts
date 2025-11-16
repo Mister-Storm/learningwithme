@@ -102,8 +102,14 @@ tasks.register<JacocoReport>("jacocoMergedReport") {
     dependsOn("test", "intTest")
 
     executionData(
-        layout.buildDirectory.file("jacoco/test.exec").get().asFile,
-        layout.buildDirectory.file("jacoco/intTest.exec").get().asFile
+        layout.buildDirectory
+            .file("jacoco/test.exec")
+            .get()
+            .asFile,
+        layout.buildDirectory
+            .file("jacoco/intTest.exec")
+            .get()
+            .asFile,
     )
 
     reports {
@@ -114,13 +120,20 @@ tasks.register<JacocoReport>("jacocoMergedReport") {
     sourceSets(sourceSets["main"])
 }
 
-
 tasks.register("checkCoverage") {
     dependsOn("jacocoMergedReport")
     doLast {
-        val report = layout.buildDirectory.file("reports/jacoco/jacocoMergedReport/xml/report.xml").get().asFile
-        val coverage = report.readText().substringAfter("line-rate=\"")
-            .substringBefore("\"").toDouble()
+        val report =
+            layout.buildDirectory
+                .file("reports/jacoco/jacocoMergedReport/xml/report.xml")
+                .get()
+                .asFile
+        val coverage =
+            report
+                .readText()
+                .substringAfter("line-rate=\"")
+                .substringBefore("\"")
+                .toDouble()
 
         if (coverage < 0.75) {
             throw GradleException("❌ Cobertura unitária abaixo de 75% ($coverage)")
@@ -142,18 +155,23 @@ pitest {
 
 tasks.named("pitest") {
     doLast {
-        val file = layout.buildDirectory.file("reports/pitest/index.html").get().asFile
+        val file =
+            layout.buildDirectory
+                .file("reports/pitest/index.html")
+                .get()
+                .asFile
         if (!file.exists()) throw GradleException("PIT report not found")
 
-        val survived = file.readText()
-            .substringAfter("Survived: ")
-            .substringBefore("</span>")
-            .trim()
-            .toInt()
+        val survived =
+            file
+                .readText()
+                .substringAfter("Survived: ")
+                .substringBefore("</span>")
+                .trim()
+                .toInt()
 
         if (survived > 25) {
             throw GradleException("❌ Mais de 25% dos mutantes sobreviveram ($survived%)")
         }
     }
 }
-
