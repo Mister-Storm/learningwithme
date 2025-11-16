@@ -39,6 +39,10 @@ dependencies {
     testImplementation("org.springframework.modulith:spring-modulith-starter-test") {
         exclude(group = "org.mockito", module = "mockito-core")
     }
+    testImplementation("org.testcontainers:junit-jupiter:1.19.0")
+    testImplementation("org.testcontainers:postgresql:1.19.0")
+    testImplementation("org.postgresql:postgresql:42.6.0")
+
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
