@@ -2,7 +2,7 @@ name: Deploy CI History to Pages
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -11,27 +11,54 @@ permissions:
   id-token: write
 
 jobs:
-  publish:
+  build-history:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure .ci-history exists
+      - name: Download coverage reports artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-reports
+
+      - name: Prepare .ci-history
         run: |
           mkdir -p .ci-history
+
+          # Persist coverage history
           if [ ! -f .ci-history/history.json ]; then
-            echo '{"branch":"init","timestamp":0,"coverage":0}' > .ci-history/history.json
+            echo '[]' > .ci-history/history.json
           fi
 
-      - name: Upload pages content
+          # Calculate new coverage value
+          COVERAGE=$(grep -o 'coverage="[0-9]\+"' build/reports/jacoco/jacocoMergedReport/html/index.html | grep -o '[0-9]\+')
+          [ -z "$COVERAGE" ] && COVERAGE=0
+
+          echo "⏺ Adding new coverage entry: $COVERAGE%"
+
+          jq ". + [{\"timestamp\": $(date +%s), \"coverage\": $COVERAGE}]" .ci-history/history.json > .ci-history/tmp.json
+          mv .ci-history/tmp.json .ci-history/history.json
+
+          # Generate badge
+          cat > .ci-history/coverage-badge.json <<EOF
+          {
+            "schemaVersion": 1,
+            "label": "coverage",
+            "message": "${COVERAGE}%",
+            "color": "${COVERAGE}"
+          }
+          EOF
+
+      - name: Upload artifact to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: .ci-history
 
   deploy:
-    needs: publish
+    needs: build-history
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         uses: actions/deploy-pages@v4
