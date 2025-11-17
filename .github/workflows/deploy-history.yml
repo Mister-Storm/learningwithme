@@ -11,54 +11,39 @@ permissions:
   id-token: write
 
 jobs:
-  build-history:
+  publish:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download coverage reports artifact
+      - name: Download ALL artifacts
         uses: actions/download-artifact@v4
         with:
-          name: coverage-reports
+          path: artifacts
 
       - name: Prepare .ci-history
         run: |
           mkdir -p .ci-history
 
-          # Persist coverage history
-          if [ ! -f .ci-history/history.json ]; then
-            echo '[]' > .ci-history/history.json
-          fi
+          # Extract coverage from Jacoco reports wherever they are
+          REPORT=$(grep -R "line-rate" -m1 artifacts || echo "0")
+          COVERAGE=$(echo "$REPORT" | sed -n 's/.*line-rate="\([0-9\.]*\)".*/\1/p')
+          COVERAGE=${COVERAGE:-0}
+          COVERAGE=$(printf "%.0f" "$(echo "$COVERAGE * 100" | bc)")
 
-          # Calculate new coverage value
-          COVERAGE=$(grep -o 'coverage="[0-9]\+"' build/reports/jacoco/jacocoMergedReport/html/index.html | grep -o '[0-9]\+')
-          [ -z "$COVERAGE" ] && COVERAGE=0
+          echo "Coverage: $COVERAGE%"
 
-          echo "⏺ Adding new coverage entry: $COVERAGE%"
+          echo '{"coverage":'${COVERAGE}'}' > .ci-history/coverage-badge.json
 
-          jq ". + [{\"timestamp\": $(date +%s), \"coverage\": $COVERAGE}]" .ci-history/history.json > .ci-history/tmp.json
-          mv .ci-history/tmp.json .ci-history/history.json
-
-          # Generate badge
-          cat > .ci-history/coverage-badge.json <<EOF
-          {
-            "schemaVersion": 1,
-            "label": "coverage",
-            "message": "${COVERAGE}%",
-            "color": "${COVERAGE}"
-          }
-          EOF
-
-      - name: Upload artifact to GitHub Pages
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: .ci-history
 
   deploy:
-    needs: build-history
+    needs: publish
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy
+      - name: Deploy to Pages
         uses: actions/deploy-pages@v4
