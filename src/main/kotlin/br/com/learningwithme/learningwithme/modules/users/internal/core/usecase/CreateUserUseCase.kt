@@ -2,7 +2,7 @@ package br.com.learningwithme.learningwithme.modules.users.internal.core.usecase
 
 import br.com.learningwithme.learningwithme.modules.shared.api.Email
 import br.com.learningwithme.learningwithme.modules.shared.api.UseCase
-import br.com.learningwithme.learningwithme.modules.users.internal.core.UserCreatedResponse
+import br.com.learningwithme.learningwithme.modules.users.internal.core.response.UserCreatedResponse
 import br.com.learningwithme.learningwithme.modules.users.internal.core.command.CreateUserCommand
 import br.com.learningwithme.learningwithme.modules.users.internal.core.exception.EmailAlreadyExistsException
 import br.com.learningwithme.learningwithme.modules.users.internal.core.publisher.UserEventProducer

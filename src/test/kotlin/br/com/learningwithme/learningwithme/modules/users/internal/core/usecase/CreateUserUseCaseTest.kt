@@ -1,6 +1,6 @@
 package br.com.learningwithme.learningwithme.modules.users.internal.core.usecase
 
-import br.com.learningwithme.learningwithme.modules.users.internal.core.UserCreatedResponse
+import br.com.learningwithme.learningwithme.modules.users.internal.core.response.UserCreatedResponse
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.Status
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
 import br.com.learningwithme.learningwithme.modules.users.internal.core.exception.EmailAlreadyExistsException

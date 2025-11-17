@@ -1,4 +1,4 @@
-package br.com.learningwithme.learningwithme.modules.users.internal.core
+package br.com.learningwithme.learningwithme.modules.users.internal.core.response
 
 import br.com.learningwithme.learningwithme.modules.shared.api.Email
 import java.time.Instant
