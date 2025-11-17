@@ -2,9 +2,8 @@ name: Deploy CI History to Pages
 
 on:
   workflow_run:
-    workflows: [ "CI" ]
-    types:
-      - completed
+    workflows: ["CI"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -13,10 +12,11 @@ permissions:
 
 jobs:
   publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Download ALL artifacts
         uses: actions/download-artifact@v4
@@ -27,13 +27,10 @@ jobs:
         run: |
           mkdir -p .ci-history
 
-          # Extract coverage from Jacoco reports wherever they are
           REPORT=$(grep -R "line-rate" -m1 artifacts || echo "0")
           COVERAGE=$(echo "$REPORT" | sed -n 's/.*line-rate="\([0-9\.]*\)".*/\1/p')
           COVERAGE=${COVERAGE:-0}
           COVERAGE=$(printf "%.0f" "$(echo "$COVERAGE * 100" | bc)")
-
-          echo "Coverage: $COVERAGE%"
 
           echo '{"coverage":'${COVERAGE}'}' > .ci-history/coverage-badge.json
 
