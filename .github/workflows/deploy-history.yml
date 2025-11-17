@@ -1,16 +1,17 @@
 name: Deploy CI History to Pages
+
 on:
   push:
     branches: ["**"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+
 jobs:
   publish:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,9 +19,8 @@ jobs:
       - name: Ensure .ci-history exists
         run: |
           mkdir -p .ci-history
-          # if there's no history yet, create a stub
           if [ ! -f .ci-history/history.json ]; then
-            echo '{"branch":"init","time":0,"coverage":0}' > .ci-history/history.json
+            echo '{"branch":"init","timestamp":0,"coverage":0}' > .ci-history/history.json
           fi
 
       - name: Upload pages content
@@ -31,8 +31,6 @@ jobs:
   deploy:
     needs: publish
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
     steps:
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v1

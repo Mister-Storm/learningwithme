@@ -5,14 +5,16 @@ on:
     branches: ["**"]
   pull_request:
 
-jobs:
-  ci:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
+permissions:
+  contents: read
+  pages: write
 
+jobs:
+  build:
+    name: Build & Tests
+    runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ github.run_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,7 +36,7 @@ jobs:
       - name: 🔹 Run KtLint
         run: ./gradlew ktlintCheck --no-daemon
 
-      - name: 🔹 Build (compile)
+      - name: 🔹 Build (compile only)
         run: ./gradlew build -x test --no-daemon
 
       - name: 🔹 Unit Tests
@@ -47,11 +49,26 @@ jobs:
         run: ./gradlew pitest --no-daemon
         continue-on-error: true
 
-      - name: 🔹 Coverage Report + snapshot — allowed to fail
+      - name: 🔹 Coverage Report + Snapshot — allowed to fail
         run: ./gradlew jacocoMergedReport writeCoverageSnapshot writePitSnapshot --no-daemon
         continue-on-error: true
 
-      - name: 📦 Upload Reports
+      - name: Create coverage-badge.json (for Shields)
+        run: |
+          mkdir -p .ci-history
+          LAST=$(tail -n 1 .ci-history/history.json 2>/dev/null || echo '{"branch":"unknown","timestamp":0,"coverage":0}')
+          # try to extract coverage as digits
+          COVERAGE=$(echo "$LAST" | sed -n 's/.*"coverage":\([0-9][0-9]*\).*/\1/p' || echo "0")
+          cat > .ci-history/coverage-badge.json <<EOF
+          {
+            "schemaVersion":1,
+            "label":"coverage",
+            "message":"${COVERAGE}%",
+            "color":"${COVERAGE:-0}"
+          }
+          EOF
+
+      - name: 📦 Upload Reports (JaCoCo, PIT, .ci-history)
         uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
@@ -60,5 +77,53 @@ jobs:
             build/reports/pitest
             .ci-history
 
-      - name: 🔹 Build Docker Image
-        run: docker build -t learningwithme:latest .
+  pr-report:
+    name: PR Coverage Report
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Download reports artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-reports
+          path: ./artifacts
+
+      - name: Parse coverage & mutation values
+        id: parse
+        run: |
+          set -e
+          COVERAGE="n/a"
+          MUTATION="n/a"
+
+          # try JaCoCo merged html
+          if [ -f ./artifacts/jacocoMergedReport/html/index.html ]; then
+            # try to pick a percent like "Line coverage XX%"
+            COVERAGE=$(grep -oP 'Line coverage.*?>\K[0-9]{1,3}' ./artifacts/jacocoMergedReport/html/index.html | head -1 || true)
+          fi
+
+          # fallback to history
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "n/a" ]; then
+            if [ -f ./artifacts/.ci-history/history.json ]; then
+              COVERAGE=$(tail -n1 ./artifacts/.ci-history/history.json | sed -n 's/.*"coverage":\([0-9][0-9]*\).*/\1/p' || true)
+            fi
+          fi
+
+          # mutation coverage
+          if [ -f ./artifacts/pitest/index.html ]; then
+            MUTATION=$(grep -oP 'Mutation Coverage.*?>\K[0-9]{1,3}' ./artifacts/pitest/index.html | head -1 || true)
+          fi
+
+          echo "::set-output name=coverage::${COVERAGE:-n/a}"
+          echo "::set-output name=mutation::${MUTATION:-n/a}"
+
+      - name: Create or update PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          message: |
+            ## 📊 CI Coverage summary
+            - **JaCoCo coverage:** `${{ steps.parse.outputs.coverage }}%`
+            - **PIT mutation coverage:** `${{ steps.parse.outputs.mutation }}%`
+            - Reports (JaCoCo & PIT) and `.ci-history` archived as workflow artifacts in the build job.
+            - Note: mutation & coverage steps are allowed-to-fail in CI (they won't block the merge).
