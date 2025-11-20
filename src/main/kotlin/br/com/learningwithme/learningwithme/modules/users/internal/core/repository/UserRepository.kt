@@ -1,9 +1,11 @@
 package br.com.learningwithme.learningwithme.modules.users.internal.core.repository
 
+import arrow.core.Either
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
+import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.CreateUserError
 
 interface UserRepository {
-    fun save(user: User): User
+    suspend fun save(user: User): Either<CreateUserError, User>
 
-    fun findByEmail(email: String): User?
+    suspend fun findByEmail(email: String): Either<CreateUserError, User?>
 }

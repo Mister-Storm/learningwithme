@@ -34,6 +34,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.springframework.modulith:spring-modulith-starter-core:1.3.0")
     implementation("org.springframework.modulith:spring-modulith-starter-jdbc")
+    implementation("io.arrow-kt:arrow-core:1.2.0")
+    implementation("io.arrow-kt:arrow-fx-coroutines:1.2.0")
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     runtimeOnly("org.postgresql:postgresql")
@@ -42,6 +44,7 @@ dependencies {
         exclude(group = "org.mockito", module = "mockito-core")
     }
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
     testImplementation("io.mockk:mockk:1.14.6")
     testImplementation("org.springframework.modulith:spring-modulith-starter-test") {
         exclude(group = "org.mockito", module = "mockito-core")

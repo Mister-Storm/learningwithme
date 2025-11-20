@@ -1,4 +1,4 @@
-package br.com.learningwithme.learningwithme.modules.users.internal.core.exception.enums
+package br.com.learningwithme.learningwithme.modules.users.internal.core.errors.enums
 
 enum class ErrorCode(
     val code: String,
