@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.raise.either
 import br.com.learningwithme.learningwithme.modules.shared.api.UseCase
 import br.com.learningwithme.learningwithme.modules.users.internal.core.command.CreateUserCommand
+import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.CreateUserError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.publisher.UserEventProducer
 import br.com.learningwithme.learningwithme.modules.users.internal.core.repository.UserRepository
@@ -18,9 +19,9 @@ class CreateUserUseCase(
     override suspend fun invoke(input: CreateUserCommand): Either<CreateUserError, UserCreatedResponse> =
         either {
             UserValidator.validUser(input).bind()
-            val existingEmail = userRepository.findByEmail(input.email).bind()
+            val existingEmail: User? = userRepository.findByEmail(input.email).bind()
             if (existingEmail != null) {
-                raise(CreateUserError.InvalidEmail)
+                raise(CreateUserError.EmailAlreadyExists)
             }
             input
                 .toUserEntity()
