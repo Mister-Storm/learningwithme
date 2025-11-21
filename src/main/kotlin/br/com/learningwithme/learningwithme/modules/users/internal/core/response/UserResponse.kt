@@ -4,7 +4,7 @@ import br.com.learningwithme.learningwithme.modules.shared.api.Email
 import java.time.Instant
 import java.util.UUID
 
-data class UserCreatedResponse(
+data class UserResponse(
     val id: UUID,
     val email: Email,
     val status: String,

@@ -9,7 +9,7 @@ import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.C
 import br.com.learningwithme.learningwithme.modules.users.internal.core.publisher.UserEventProducer
 import br.com.learningwithme.learningwithme.modules.users.internal.core.repository.DbTransaction
 import br.com.learningwithme.learningwithme.modules.users.internal.core.repository.UserRepository
-import br.com.learningwithme.learningwithme.modules.users.internal.core.response.UserCreatedResponse
+import br.com.learningwithme.learningwithme.modules.users.internal.core.response.UserResponse
 import br.com.learningwithme.learningwithme.modules.users.internal.core.support.extensions.toUserCreatedResponse
 import br.com.learningwithme.learningwithme.modules.users.internal.core.support.validators.UserValidator
 
@@ -17,8 +17,8 @@ class CreateUserUseCase(
     private val userRepository: UserRepository,
     private val publisher: UserEventProducer,
     private val dbTransaction: DbTransaction,
-) : UseCase<CreateUserCommand, Either<CreateUserError, UserCreatedResponse>>() {
-    override suspend fun invoke(input: CreateUserCommand): Either<CreateUserError, UserCreatedResponse> =
+) : UseCase<CreateUserCommand, CreateUserError, UserResponse>() {
+    override suspend fun invoke(input: CreateUserCommand): Either<CreateUserError, UserResponse> =
         either {
             UserValidator.validUser(input).bind()
             val existingEmail: User? = userRepository.findByEmail(input.email).bind()

@@ -6,7 +6,9 @@ import br.com.learningwithme.learningwithme.modules.shared.api.DocumentType
 import br.com.learningwithme.learningwithme.modules.shared.api.Email
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.Status
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
+import java.security.SecureRandom
 import java.time.Instant
+import java.util.Base64
 import java.util.UUID
 
 data class CreateUserCommand(
@@ -45,7 +47,18 @@ data class CreateUserCommand(
                     zipCode = this.zipCode,
                 ),
             status = Status.PENDING_CONFIRMATION,
+            token = generateToken(),
             createdAt = Instant.now(),
             updatedAt = Instant.now(),
         )
+
+    private fun generateToken(): String {
+        val bytes = ByteArray(32)
+        SecureRandom.getInstanceStrong().nextBytes(bytes)
+
+        return Base64
+            .getUrlEncoder()
+            .withoutPadding()
+            .encodeToString(bytes)
+    }
 }

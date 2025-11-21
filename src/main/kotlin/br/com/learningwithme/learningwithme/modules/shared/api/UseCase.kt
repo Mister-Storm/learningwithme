@@ -1,5 +1,7 @@
 package br.com.learningwithme.learningwithme.modules.shared.api
 
-abstract class UseCase<T, U> {
-    abstract suspend operator fun invoke(input: T): U
+import arrow.core.Either
+
+abstract class UseCase<T, U, V> {
+    abstract suspend operator fun invoke(input: T): Either<U, V>
 }

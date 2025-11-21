@@ -6,7 +6,7 @@ import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.U
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.CreateUserError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.publisher.UserEventProducer
 import br.com.learningwithme.learningwithme.modules.users.internal.core.repository.UserRepository
-import br.com.learningwithme.learningwithme.modules.users.internal.core.response.UserCreatedResponse
+import br.com.learningwithme.learningwithme.modules.users.internal.core.response.UserResponse
 import br.com.learningwithme.learningwithme.modules.users.support.fixtures.CreateUserCommandFixture.INVALID_CPF_CREATE_COMMAND
 import br.com.learningwithme.learningwithme.modules.users.support.fixtures.CreateUserCommandFixture.INVALID_EMAIL_CREATE_COMMAND
 import br.com.learningwithme.learningwithme.modules.users.support.fixtures.CreateUserCommandFixture.VALID_CREATE_COMMAND
@@ -31,7 +31,7 @@ class CreateUserUseCaseTest {
             val publisher: UserEventProducer = spyk(SUCCESS_PRODUCER)
             val sut = CreateUserUseCase(repository, publisher, DEFAULT_DB_TRANSACTION)
 
-            val result: Either<CreateUserError, UserCreatedResponse> = sut(INVALID_CPF_CREATE_COMMAND)
+            val result: Either<CreateUserError, UserResponse> = sut(INVALID_CPF_CREATE_COMMAND)
             assertAll(
                 { assertTrue(result.isLeft()) },
                 { assertTrue(result.leftOrNull() is CreateUserError.IncorrectDocumentNumber) },
@@ -48,7 +48,7 @@ class CreateUserUseCaseTest {
             val publisher: UserEventProducer = spyk(SUCCESS_PRODUCER)
             val sut = CreateUserUseCase(repository, publisher, DEFAULT_DB_TRANSACTION)
 
-            val result: Either<CreateUserError, UserCreatedResponse> = sut(INVALID_EMAIL_CREATE_COMMAND)
+            val result: Either<CreateUserError, UserResponse> = sut(INVALID_EMAIL_CREATE_COMMAND)
 
             assertAll(
                 { assertTrue(result.isLeft()) },
@@ -66,7 +66,7 @@ class CreateUserUseCaseTest {
             val publisher: UserEventProducer = spyk(SUCCESS_PRODUCER)
             val sut = CreateUserUseCase(repository, publisher, DEFAULT_DB_TRANSACTION)
 
-            val result: Either<CreateUserError, UserCreatedResponse> = sut(VALID_CREATE_COMMAND)
+            val result: Either<CreateUserError, UserResponse> = sut(VALID_CREATE_COMMAND)
 
             assertAll(
                 { assertTrue(result.isLeft()) },
@@ -85,7 +85,7 @@ class CreateUserUseCaseTest {
             val userCaptor = slot<User>()
             val sut = CreateUserUseCase(repository, publisher, DEFAULT_DB_TRANSACTION)
 
-            val result: Either<CreateUserError, UserCreatedResponse> = sut(VALID_CREATE_COMMAND)
+            val result: Either<CreateUserError, UserResponse> = sut(VALID_CREATE_COMMAND)
 
             assertAll(
                 { coVerify(exactly = 1) { repository.findByEmail(VALID_CREATE_COMMAND.email) } },
