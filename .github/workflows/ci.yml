@@ -61,14 +61,22 @@ jobs:
       # --------------------------
       - name: Prepare coverage artifacts folder
         run: |
+          set -e
+
           mkdir -p coverage-reports
           mkdir -p coverage-reports/.ci-history
 
           echo "Copying JaCoCo reports..."
-          cp -r build/reports/jacoco/* coverage-reports/ || true
+          cp -r build/reports/jacoco/* coverage-reports/ 2>/dev/null || true
 
           echo "Copying PIT reports..."
-          cp -r build/reports/pitest/* coverage-reports/ || true
+          cp -r build/reports/pitest/* coverage-reports/ 2>/dev/null || true
 
           echo "Copying snapshots (.ci-history)..."
           if [ -d ".ci-history" ]; then
+            cp -r .ci-history/* coverage-reports/.ci-history/ 2>/dev/null || true
+          fi
+
+          echo "Final artifact tree:"
+          find coverage-reports -type f || true
+
