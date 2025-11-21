@@ -57,13 +57,13 @@ jobs:
         continue-on-error: true
 
       # --------------------------
-      # Prepare artifacts
+      # Prepare & debug coverage artifacts
       # --------------------------
       - name: Prepare & debug coverage artifacts
         run: |
           set -eux
 
-          echo "Listing build/*"
+          echo "Listing build directory"
           ls -la build || true
 
           echo "Listing build/jacoco"
@@ -104,22 +104,29 @@ jobs:
         run: |
           echo "=== list build/reports/jacoco ==="
           ls -la build/reports/jacoco || true
-      
+
           echo "=== list build/reports/pitest ==="
           ls -la build/reports/pitest || true
-      
+
           echo "=== list build/jacoco directory (execs) ==="
           ls -la build/jacoco || true
-      
+
           echo "=== find any index.html under build ==="
           find build -type f -name index.html -print || true
-      
+
           echo "=== show first lines of any jacoco html index if present ==="
           if [ -f build/reports/jacoco/jacocoMergedReport/html/index.html ]; then
             head -n 80 build/reports/jacoco/jacocoMergedReport/html/index.html || true
-         fi
+          fi
 
           echo "=== show pitest index sample ==="
           if [ -f build/reports/pitest/index.html ]; then
             head -n 80 build/reports/pitest/index.html || true
           fi
+
+      - name: 📦 Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: coverage-reports
+          retention-days: 14
