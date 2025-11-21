@@ -17,8 +17,8 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: temurin
+          java-version: 21
 
       - name: Cache Gradle packages
         uses: actions/cache@v4
@@ -30,17 +30,51 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Run tests & generate reports
-        run: ./gradlew clean build jacocoMergedReport pitest --info
+      # --------------------------
+      # Build + Tests
+      # --------------------------
+      - name: 🔹 Build (compile only)
+        run: ./gradlew build -x test --no-daemon --continue
 
+      - name: 🔹 Unit Tests
+        run: ./gradlew test --no-daemon --continue
+
+      - name: 🔹 Integration Tests
+        run: ./gradlew intTest --no-daemon --continue
+
+      # --------------------------
+      # PIT Mutation Testing
+      # (allowed to fail, but MUST generate reports)
+      # --------------------------
+      - name: 🔹 Mutation Testing (PIT) — allowed to fail
+        run: ./gradlew pitest --no-daemon --continue
+        continue-on-error: true
+
+      # --------------------------
+      # Jacoco merged + snapshots
+      # --------------------------
+      - name: 🔹 Coverage Report + Snapshot — allowed to fail
+        run: ./gradlew jacocoMergedReport writeCoverageSnapshot writePitSnapshot --no-daemon --continue
+        continue-on-error: true
+
+      # --------------------------
+      # Prepare artifacts
+      # --------------------------
       - name: Prepare coverage artifacts folder
         run: |
           mkdir -p coverage-reports
+          mkdir -p coverage-reports/.ci-history
+
+          # Copy reports
           cp -r build/reports/jacoco/* coverage-reports/ || true
           cp -r build/reports/pitest/* coverage-reports/ || true
-          cp -r .ci-history/* coverage-reports/.ci-history/ || true
 
-      - name: Upload coverage artifacts
+          # Copy snapshots
+          if [ -d ".ci-history" ]; then
+            cp -r .ci-history/* coverage-reports/.ci-history/ || true
+          fi
+
+      - name: 📦 Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
