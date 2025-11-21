@@ -10,7 +10,7 @@ import br.com.learningwithme.learningwithme.modules.users.internal.core.publishe
 import br.com.learningwithme.learningwithme.modules.users.internal.core.repository.DbTransaction
 import br.com.learningwithme.learningwithme.modules.users.internal.core.repository.UserRepository
 import br.com.learningwithme.learningwithme.modules.users.internal.core.response.UserResponse
-import br.com.learningwithme.learningwithme.modules.users.internal.core.support.extensions.toUserCreatedResponse
+import br.com.learningwithme.learningwithme.modules.users.internal.core.support.extensions.toUserResponse
 import br.com.learningwithme.learningwithme.modules.users.internal.core.support.validators.UserValidator
 
 class CreateUserUseCase(
@@ -32,6 +32,6 @@ class CreateUserUseCase(
                         userRepository.save(user).bind()
                         publisher.publishUserCreatedEvent(user).bind()
                     }
-                }.toUserCreatedResponse()
+                }.toUserResponse()
         }
 }

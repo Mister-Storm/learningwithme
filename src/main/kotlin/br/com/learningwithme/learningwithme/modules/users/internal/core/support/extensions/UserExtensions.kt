@@ -3,7 +3,7 @@ package br.com.learningwithme.learningwithme.modules.users.internal.core.support
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
 import br.com.learningwithme.learningwithme.modules.users.internal.core.response.UserResponse
 
-fun User.toUserCreatedResponse() =
+fun User.toUserResponse() =
     UserResponse(
         id = this.id,
         email = this.email,

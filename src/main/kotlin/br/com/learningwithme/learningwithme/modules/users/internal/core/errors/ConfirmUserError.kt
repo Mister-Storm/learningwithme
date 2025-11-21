@@ -4,4 +4,6 @@ sealed interface ConfirmUserError : DomainError {
     data object UserNotFound : ConfirmUserError
 
     data object UserAlreadyConfirmed : ConfirmUserError
+
+    data object UnexpectedError : ConfirmUserError
 }

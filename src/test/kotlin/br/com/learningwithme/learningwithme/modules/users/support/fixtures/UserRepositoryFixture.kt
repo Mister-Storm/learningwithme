@@ -1,16 +1,13 @@
 package br.com.learningwithme.learningwithme.modules.users.support.fixtures
 
 import arrow.core.Either
-import br.com.learningwithme.learningwithme.modules.shared.api.Address
-import br.com.learningwithme.learningwithme.modules.shared.api.Document
-import br.com.learningwithme.learningwithme.modules.shared.api.DocumentType
-import br.com.learningwithme.learningwithme.modules.shared.api.Email
-import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.Status
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
+import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.UserAuth
+import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.ConfirmUserError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.CreateUserError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.repository.UserRepository
-import java.time.Instant
-import java.util.UUID
+import br.com.learningwithme.learningwithme.modules.users.support.fixtures.UserFixture.DEFAULT_USER
+import br.com.learningwithme.learningwithme.modules.users.support.fixtures.UserFixture.USER_CONFIRMED
 
 object UserRepositoryFixture {
     val DEFAULT_REPOSITORY: UserRepository = object : DefaultFixture() {}
@@ -18,37 +15,30 @@ object UserRepositoryFixture {
         object : DefaultFixture() {
             override suspend fun findByEmail(email: String): Either<CreateUserError, User> =
                 Either.Right(
-                    User(
-                        id = UUID.randomUUID(),
-                        email = Email(email),
-                        firstName = "Existing",
-                        lastName = "User",
-                        document =
-                            Document(
-                                documentType = DocumentType.CPF,
-                                value = "66462778008",
-                            ),
-                        address =
-                            Address(
-                                street = "X",
-                                number = "67",
-                                complement = "",
-                                district = "",
-                                city = "",
-                                state = "",
-                                zipCode = "88134000",
-                            ),
-                        status = Status.ENABLED,
-                        token = "00000",
-                        createdAt = Instant.now(),
-                        updatedAt = Instant.now(),
-                    ),
+                    DEFAULT_USER,
+                )
+        }
+    val WITH_TOKEN_NOT_FOUND: UserRepository =
+        object : DefaultFixture() {
+            override suspend fun findByToken(email: String): Either<ConfirmUserError, User> = Either.Left(ConfirmUserError.UserNotFound)
+        }
+    val WITH_USER_ALREADY_CONFIRMED: UserRepository =
+        object : DefaultFixture() {
+            override suspend fun findByToken(email: String): Either<ConfirmUserError, User> =
+                Either.Right(
+                    USER_CONFIRMED,
                 )
         }
 
     private abstract class DefaultFixture : UserRepository {
         override suspend fun save(user: User): Either<CreateUserError, User> = Either.Right(user)
 
+        override suspend fun saveUserAuth(userAuth: UserAuth): Either<ConfirmUserError, UserAuth> = Either.Right(userAuth)
+
+        override suspend fun update(user: User): Either<ConfirmUserError, User> = Either.Right(user)
+
         override suspend fun findByEmail(email: String): Either<CreateUserError, User?> = Either.Right(null)
+
+        override suspend fun findByToken(email: String): Either<ConfirmUserError, User> = Either.Right(DEFAULT_USER)
     }
 }
