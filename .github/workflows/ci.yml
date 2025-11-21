@@ -129,3 +129,8 @@ jobs:
             - **PIT mutation coverage:** `${{ steps.parse.outputs.mutation }}%`
             - Reports (JaCoCo & PIT) and `.ci-history` archived as workflow artifacts in the build job.
             - Note: mutation & coverage steps are allowed-to-fail in CI (they won't block the merge).
+      - name: Debug artifact content
+        run: |
+          echo "=== Artifact files ==="
+          find ./artifacts -type f
+
