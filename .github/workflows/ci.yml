@@ -119,7 +119,7 @@ jobs:
             head -n 80 build/reports/jacoco/jacocoMergedReport/html/index.html || true
          fi
 
-      echo "=== show pitest index sample ==="
-      if [ -f build/reports/pitest/index.html ]; then
-        head -n 80 build/reports/pitest/index.html || true
-      fi
+          echo "=== show pitest index sample ==="
+          if [ -f build/reports/pitest/index.html ]; then
+            head -n 80 build/reports/pitest/index.html || true
+          fi
