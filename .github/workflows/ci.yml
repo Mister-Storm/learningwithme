@@ -73,9 +73,10 @@ jobs:
         with:
           name: coverage-reports
           path: |
-            build/reports/jacoco/jacocoMergedReport/html
-            build/reports/pitest
-            .ci-history
+            build/reports/jacoco/jacocoMergedReport/html/**
+            build/reports/pitest/**
+            .ci-history/**
+          if-no-files-found: error
 
   pr-report:
     name: PR Coverage Report
@@ -88,6 +89,7 @@ jobs:
         with:
           name: coverage-reports
           path: ./artifacts
+          merge-multiple: true
 
       - name: Parse coverage & mutation values
         id: parse
