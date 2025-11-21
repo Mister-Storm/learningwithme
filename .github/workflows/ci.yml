@@ -59,24 +59,43 @@ jobs:
       # --------------------------
       # Prepare artifacts
       # --------------------------
-      - name: Prepare coverage artifacts folder
+      - name: Prepare & debug coverage artifacts
         run: |
-          set -e
+          set -eux
 
-          mkdir -p coverage-reports
+          echo "Listing build/*"
+          ls -la build || true
+
+          echo "Listing build/jacoco"
+          ls -la build/jacoco || true
+
+          echo "Listing build/reports/jacoco"
+          ls -la build/reports/jacoco || true
+
+          echo "Listing build/reports/pitest"
+          ls -la build/reports/pitest || true
+
+          mkdir -p coverage-reports/jacocoMergedReport/html
+          mkdir -p coverage-reports/pitest
           mkdir -p coverage-reports/.ci-history
 
-          echo "Copying JaCoCo reports..."
-          cp -r build/reports/jacoco/* coverage-reports/ 2>/dev/null || true
-
-          echo "Copying PIT reports..."
-          cp -r build/reports/pitest/* coverage-reports/ 2>/dev/null || true
-
-          echo "Copying snapshots (.ci-history)..."
-          if [ -d ".ci-history" ]; then
-            cp -r .ci-history/* coverage-reports/.ci-history/ 2>/dev/null || true
+          if [ -d "build/reports/jacoco/jacocoMergedReport/html" ]; then
+            echo "copying jacocoMergedReport/html..."
+            cp -r build/reports/jacoco/jacocoMergedReport/html/* coverage-reports/jacocoMergedReport/html/ || true
+          else
+            echo "No jacocoMergedReport/html found"
           fi
 
-          echo "Final artifact tree:"
-          find coverage-reports -type f || true
+          if [ -d "build/reports/pitest" ]; then
+            echo "copying pitest..."
+            cp -r build/reports/pitest/* coverage-reports/pitest/ || true
+          else
+            echo "No pitest found"
+          fi
 
+          if [ -d ".ci-history" ]; then
+            cp -r .ci-history/* coverage-reports/.ci-history/ || true
+          fi
+
+          echo "Resulting coverage-reports:"
+          find coverage-reports -maxdepth 5 -type f -print || true
