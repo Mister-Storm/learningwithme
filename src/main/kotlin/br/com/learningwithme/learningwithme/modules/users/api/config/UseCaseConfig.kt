@@ -21,7 +21,7 @@ class UseCaseConfig {
     ): UseCase<CreateUserCommand, CreateUserError, UserResponse> =
         CreateUserUseCase(
             userRepository = userRepository,
-            publisher = TODO(),
+            publisher = publisher,
             dbTransaction = dbTransaction,
         )
 }
