@@ -13,15 +13,15 @@ import org.springframework.context.annotation.Configuration
 
 @Configuration
 class UseCaseConfig {
-
     @Bean
     fun createUserUseCase(
         userRepository: UserRepository,
         publisher: UserEventProducer,
         dbTransaction: DbTransaction,
-        ): UseCase<CreateUserCommand, CreateUserError, UserResponse> = CreateUserUseCase(
-        userRepository = userRepository,
-        publisher = TODO(),
-        dbTransaction = dbTransaction,
-    )
+    ): UseCase<CreateUserCommand, CreateUserError, UserResponse> =
+        CreateUserUseCase(
+            userRepository = userRepository,
+            publisher = TODO(),
+            dbTransaction = dbTransaction,
+        )
 }
