@@ -10,6 +10,7 @@ import br.com.learningwithme.learningwithme.modules.users.internal.core.response
 import br.com.learningwithme.learningwithme.modules.users.support.fixtures.CreateUserCommandFixture.INVALID_CPF_CREATE_COMMAND
 import br.com.learningwithme.learningwithme.modules.users.support.fixtures.CreateUserCommandFixture.INVALID_EMAIL_CREATE_COMMAND
 import br.com.learningwithme.learningwithme.modules.users.support.fixtures.CreateUserCommandFixture.VALID_CREATE_COMMAND
+import br.com.learningwithme.learningwithme.modules.users.support.fixtures.DbTransactionFixture.DEFAULT_DB_TRANSACTION
 import br.com.learningwithme.learningwithme.modules.users.support.fixtures.UserEventProducerFixture.SUCCESS_PRODUCER
 import br.com.learningwithme.learningwithme.modules.users.support.fixtures.UserRepositoryFixture.DEFAULT_REPOSITORY
 import br.com.learningwithme.learningwithme.modules.users.support.fixtures.UserRepositoryFixture.WITH_PREVIOUS_EMAIL
@@ -28,7 +29,7 @@ class CreateUserUseCaseTest {
         runTest {
             val repository: UserRepository = spyk(DEFAULT_REPOSITORY)
             val publisher: UserEventProducer = spyk(SUCCESS_PRODUCER)
-            val sut = CreateUserUseCase(repository, publisher)
+            val sut = CreateUserUseCase(repository, publisher, DEFAULT_DB_TRANSACTION)
 
             val result: Either<CreateUserError, UserCreatedResponse> = sut(INVALID_CPF_CREATE_COMMAND)
             assertAll(
@@ -45,7 +46,7 @@ class CreateUserUseCaseTest {
         runTest {
             val repository: UserRepository = spyk(DEFAULT_REPOSITORY)
             val publisher: UserEventProducer = spyk(SUCCESS_PRODUCER)
-            val sut = CreateUserUseCase(repository, publisher)
+            val sut = CreateUserUseCase(repository, publisher, DEFAULT_DB_TRANSACTION)
 
             val result: Either<CreateUserError, UserCreatedResponse> = sut(INVALID_EMAIL_CREATE_COMMAND)
 
@@ -63,7 +64,7 @@ class CreateUserUseCaseTest {
         runTest {
             val repository: UserRepository = spyk(WITH_PREVIOUS_EMAIL)
             val publisher: UserEventProducer = spyk(SUCCESS_PRODUCER)
-            val sut = CreateUserUseCase(repository, publisher)
+            val sut = CreateUserUseCase(repository, publisher, DEFAULT_DB_TRANSACTION)
 
             val result: Either<CreateUserError, UserCreatedResponse> = sut(VALID_CREATE_COMMAND)
 
@@ -82,7 +83,7 @@ class CreateUserUseCaseTest {
             val repository: UserRepository = spyk(DEFAULT_REPOSITORY)
             val publisher: UserEventProducer = spyk(SUCCESS_PRODUCER)
             val userCaptor = slot<User>()
-            val sut = CreateUserUseCase(repository, publisher)
+            val sut = CreateUserUseCase(repository, publisher, DEFAULT_DB_TRANSACTION)
 
             val result: Either<CreateUserError, UserCreatedResponse> = sut(VALID_CREATE_COMMAND)
 

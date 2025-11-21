@@ -7,6 +7,7 @@ import br.com.learningwithme.learningwithme.modules.users.internal.core.command.
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.CreateUserError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.publisher.UserEventProducer
+import br.com.learningwithme.learningwithme.modules.users.internal.core.repository.DbTransaction
 import br.com.learningwithme.learningwithme.modules.users.internal.core.repository.UserRepository
 import br.com.learningwithme.learningwithme.modules.users.internal.core.response.UserCreatedResponse
 import br.com.learningwithme.learningwithme.modules.users.internal.core.support.extensions.toUserCreatedResponse
@@ -15,6 +16,7 @@ import br.com.learningwithme.learningwithme.modules.users.internal.core.support.
 class CreateUserUseCase(
     private val userRepository: UserRepository,
     private val publisher: UserEventProducer,
+    private val dbTransaction: DbTransaction,
 ) : UseCase<CreateUserCommand, Either<CreateUserError, UserCreatedResponse>>() {
     override suspend fun invoke(input: CreateUserCommand): Either<CreateUserError, UserCreatedResponse> =
         either {
@@ -26,8 +28,10 @@ class CreateUserUseCase(
             input
                 .toUserEntity()
                 .also { user ->
-                    userRepository.save(user).bind()
-                    publisher.publishUserCreatedEvent(user).bind()
+                    dbTransaction.runInTransaction {
+                        userRepository.save(user).bind()
+                        publisher.publishUserCreatedEvent(user).bind()
+                    }
                 }.toUserCreatedResponse()
         }
 }
