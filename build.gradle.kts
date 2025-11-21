@@ -224,4 +224,29 @@ tasks.register("writePitSnapshot") {
 
         println("📁 Saved PIT snapshot in ${outFile.path}")
     }
+
+    tasks.register<JacocoReport>("jacocoMergedReport") {
+
+        dependsOn("test")
+        if (project.tasks.names.contains("intTest")) {
+            dependsOn("intTest")
+        }
+
+        val execFiles =
+            fileTree(layout.buildDirectory.dir("jacoco")) {
+                include("test.exec")
+                include("test*.exec")
+                include("intTest.exec")
+                include("intTest*.exec")
+            }
+
+        executionData(execFiles)
+
+        sourceSets(sourceSets["main"])
+
+        reports {
+            xml.required.set(true)
+            html.required.set(true)
+        }
+    }
 }
