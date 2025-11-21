@@ -4,12 +4,10 @@ on:
   push:
     branches: [ main ]
   pull_request:
-
 jobs:
   ci:
     name: Build, Test & Coverage
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,7 +18,7 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Cache Gradle packages
+      - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
@@ -30,103 +28,40 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # --------------------------
-      # Build + Tests
-      # --------------------------
-      - name: 🔹 Build (compile only)
+      - name: Build (no tests)
         run: ./gradlew build -x test --no-daemon --continue
 
-      - name: 🔹 Unit Tests
+      - name: Run Unit Tests
         run: ./gradlew test --no-daemon --continue
 
-      - name: 🔹 Integration Tests
+      - name: Run Integration Tests
         run: ./gradlew intTest --no-daemon --continue
 
-      # --------------------------
-      # PIT Mutation Testing
-      # --------------------------
-      - name: 🔹 Mutation Testing (PIT) — allowed to fail
+      - name: Run PIT (allowed to fail)
         run: ./gradlew pitest --no-daemon --continue
         continue-on-error: true
 
-      # --------------------------
-      # Jacoco merged + snapshots
-      # --------------------------
-      - name: 🔹 Coverage Report + Snapshot — allowed to fail
+      - name: Run Coverage + Snapshots (allowed to fail)
         run: ./gradlew jacocoMergedReport writeCoverageSnapshot writePitSnapshot --no-daemon --continue
         continue-on-error: true
 
-      # --------------------------
-      # Prepare & debug coverage artifacts
-      # --------------------------
-      - name: Prepare & debug coverage artifacts
+      - name: Prepare Coverage Artifacts
         run: |
           set -eux
-
-          echo "Listing build directory"
-          ls -la build || true
-
-          echo "Listing build/jacoco"
-          ls -la build/jacoco || true
-
-          echo "Listing build/reports/jacoco"
-          ls -la build/reports/jacoco || true
-
-          echo "Listing build/reports/pitest"
-          ls -la build/reports/pitest || true
-
-          mkdir -p coverage-reports/jacocoMergedReport/html
-          mkdir -p coverage-reports/pitest
-          mkdir -p coverage-reports/.ci-history
-
-          if [ -d "build/reports/jacoco/jacocoMergedReport/html" ]; then
-            echo "copying jacocoMergedReport/html..."
-            cp -r build/reports/jacoco/jacocoMergedReport/html/* coverage-reports/jacocoMergedReport/html/ || true
-          else
-            echo "No jacocoMergedReport/html found"
+          mkdir -p coverage/jacoco coverage/pitest coverage/.ci-history
+          if [ -d build/reports/jacoco/jacocoMergedReport/html ]; then
+            cp -r build/reports/jacoco/jacocoMergedReport/html/* coverage/jacoco/
           fi
-
-          if [ -d "build/reports/pitest" ]; then
-            echo "copying pitest..."
-            cp -r build/reports/pitest/* coverage-reports/pitest/ || true
-          else
-            echo "No pitest found"
+          if [ -d build/reports/pitest ]; then
+            cp -r build/reports/pitest/* coverage/pitest/
           fi
-
-          if [ -d ".ci-history" ]; then
-            cp -r .ci-history/* coverage-reports/.ci-history/ || true
+          if [ -d .ci-history ]; then
+            cp -r .ci-history/* coverage/.ci-history/
           fi
+          find coverage -type f -print
 
-          echo "Resulting coverage-reports:"
-          find coverage-reports -maxdepth 5 -type f -print || true
-
-      - name: Debug show build files (jacoco, pitest, jacoco exec)
-        run: |
-          echo "=== list build/reports/jacoco ==="
-          ls -la build/reports/jacoco || true
-
-          echo "=== list build/reports/pitest ==="
-          ls -la build/reports/pitest || true
-
-          echo "=== list build/jacoco directory (execs) ==="
-          ls -la build/jacoco || true
-
-          echo "=== find any index.html under build ==="
-          find build -type f -name index.html -print || true
-
-          echo "=== show first lines of any jacoco html index if present ==="
-          if [ -f build/reports/jacoco/jacocoMergedReport/html/index.html ]; then
-            head -n 80 build/reports/jacoco/jacocoMergedReport/html/index.html || true
-          fi
-
-          echo "=== show pitest index sample ==="
-          if [ -f build/reports/pitest/index.html ]; then
-            head -n 80 build/reports/pitest/index.html || true
-          fi
-
-      - name: 📦 Upload coverage artifacts
+      - name: Upload Coverage Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
-          path: coverage-reports
-          retention-days: 14
+          path: coverage
