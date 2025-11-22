@@ -139,10 +139,11 @@ tasks.register<JacocoReport>("jacocoMergedReport") {
         dependsOn("intTest")
     }
 
-    val execFiles = fileTree(layout.buildDirectory.dir("jacoco")) {
-        include("**/*.exec")
-        include("**/*.exec*")
-    }
+    val execFiles =
+        fileTree(layout.buildDirectory.dir("jacoco")) {
+            include("**/*.exec")
+            include("**/*.exec*")
+        }
 
     executionData.setFrom(execFiles)
 
@@ -164,10 +165,17 @@ tasks.register("checkCoverage") {
     dependsOn("jacocoMergedReport")
 
     doLast {
-        val xmlReport = layout.buildDirectory.file("reports/jacoco/jacocoMergedReport/report.xml").get().asFile
+        val xmlReport =
+            layout.buildDirectory
+                .file("reports/jacoco/jacocoMergedReport/report.xml")
+                .get()
+                .asFile
         if (!xmlReport.exists()) throw GradleException("❌ JaCoCo XML report not found: ${xmlReport.path}")
 
-        val db = javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder()
+        val db =
+            javax.xml.parsers.DocumentBuilderFactory
+                .newInstance()
+                .newDocumentBuilder()
         val doc = db.parse(xmlReport)
 
         val counters = doc.getElementsByTagName("counter")
@@ -185,7 +193,7 @@ tasks.register("checkCoverage") {
 
         val percent = if ((covered + missed) == 0.0) 0 else ((covered / (covered + missed)) * 100).toInt()
 
-        println("📊 JaCoCo coverage = ${percent}%")
+        println("📊 JaCoCo coverage = $percent%")
 
         if (percent < 75) {
             throw GradleException("❌ Cobertura abaixo de 75% ($percent%)")
@@ -201,10 +209,17 @@ tasks.register("writeCoverageSnapshot") {
     dependsOn("jacocoMergedReport")
 
     doLast {
-        val xmlReport = layout.buildDirectory.file("reports/jacoco/jacocoMergedReport/report.xml").get().asFile
+        val xmlReport =
+            layout.buildDirectory
+                .file("reports/jacoco/jacocoMergedReport/report.xml")
+                .get()
+                .asFile
         if (!xmlReport.exists()) throw GradleException("JaCoCo XML not found: ${xmlReport.path}")
 
-        val db = javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder()
+        val db =
+            javax.xml.parsers.DocumentBuilderFactory
+                .newInstance()
+                .newDocumentBuilder()
         val doc = db.parse(xmlReport)
 
         val counters = doc.getElementsByTagName("counter")
@@ -242,22 +257,24 @@ tasks.register("writePitSnapshot") {
 
     doLast {
         // pit generates a folder build/reports/pitest/<timestamp>/index.html
-        val pitIndex = fileTree(layout.buildDirectory.dir("reports/pitest")) {
-            include("**/index.html")
-        }.files.firstOrNull()
+        val pitIndex =
+            fileTree(layout.buildDirectory.dir("reports/pitest")) {
+                include("**/index.html")
+            }.files.firstOrNull()
 
         val outDir = layout.projectDirectory.file(".ci-history").asFile
         outDir.mkdirs()
         val outFile = outDir.resolve("pit-summary.json")
 
-        val mutationCoverage = if (pitIndex != null && pitIndex.exists()) {
-            val content = pitIndex.readText()
-            // crude extraction: find first occurrence of 'Mutation Coverage' and grab number before %
-            val m = Regex("Mutation Coverage[^%>]*>(\\d+)").find(content)
-            m?.groupValues?.get(1)?.toIntOrNull()
-        } else {
-            null
-        }
+        val mutationCoverage =
+            if (pitIndex != null && pitIndex.exists()) {
+                val content = pitIndex.readText()
+                // crude extraction: find first occurrence of 'Mutation Coverage' and grab number before %
+                val m = Regex("Mutation Coverage[^%>]*>(\\d+)").find(content)
+                m?.groupValues?.get(1)?.toIntOrNull()
+            } else {
+                null
+            }
 
         outFile.writeText("{" + "\"mutationCoverage\":${mutationCoverage ?: "null"}}")
         println("📁 Saved PIT snapshot in ${outFile.path}")
