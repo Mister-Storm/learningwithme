@@ -35,10 +35,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # ------------------------------
-      # BUILD + TESTS
-      # ------------------------------
-
       - name: Build (no tests)
         run: ./gradlew build -x test --no-daemon --continue
 
@@ -48,70 +44,49 @@ jobs:
       - name: Run Integration Tests
         run: ./gradlew intTest --no-daemon --continue
 
-      # ------------------------------
-      # PIT (mutation testing)
-      # ------------------------------
-
       - name: Mutation Testing (PIT)
         id: pit
         run: ./gradlew pitest --no-daemon --continue
         continue-on-error: true
-
-      # ------------------------------
-      # Jacoco merged report
-      # ------------------------------
 
       - name: Generate Jacoco merged coverage
         id: jacoco
         run: ./gradlew jacocoMergedReport --no-daemon --continue
         continue-on-error: true
 
-      # ------------------------------
-      # Extract jacoco %
-      # ------------------------------
       - name: Extract Jacoco Coverage %
         id: jacoco_extract
         run: |
           set -e
           REPORT="build/reports/jacoco/jacocoMergedReport/xml/report.xml"
-
           if [ -f "$REPORT" ]; then
-            VALUE=$(grep -Po 'line-rate="\K[0-9\.]+' "$REPORT" | head -1)
-            VALUE=$(printf "%.0f" "$(echo "$VALUE * 100" | bc -l)")
+            VALUE=$(xmllint --xpath 'string(//report/counter[@type="LINE"]/@covered)' $REPORT)
+            TOTAL=$(xmllint --xpath 'string(//report/counter[@type="LINE"]/@missed)' $REPORT)
+            TOTAL_COVERED=$((VALUE + TOTAL))
+            PERCENT=$((VALUE * 100 / TOTAL_COVERED))
+            echo "jacoco_coverage=$PERCENT" >> $GITHUB_OUTPUT
           else
-            VALUE="n/a"
+            echo "jacoco_coverage=n/a" >> $GITHUB_OUTPUT
           fi
 
-          echo "jacoco_coverage=$VALUE" >> $GITHUB_OUTPUT
-
-      # ------------------------------
-      # Extract PIT %
-      # ------------------------------
       - name: Extract PIT Mutation %
         id: pit_extract
         run: |
           set -e
           REPORT=$(find build/reports/pitest -name "index.html" | head -1)
-
           if [ -n "$REPORT" ]; then
             VALUE=$(grep -Po 'Mutation Coverage[^%]*\K[0-9]+' "$REPORT" || true)
+            echo "pit_coverage=$VALUE" >> $GITHUB_OUTPUT
           else
-            VALUE="n/a"
+            echo "pit_coverage=n/a" >> $GITHUB_OUTPUT
           fi
 
-          echo "pit_coverage=$VALUE" >> $GITHUB_OUTPUT
-
-      # ------------------------------
-      # Prepare coverage artifacts
-      # ------------------------------
       - name: Collect HTML reports
         run: |
           mkdir -p coverage/jacoco coverage/pitest
-
           if [ -d build/reports/jacoco/jacocoMergedReport/html ]; then
             cp -r build/reports/jacoco/jacocoMergedReport/html/* coverage/jacoco/
           fi
-
           PIT_DIR=$(find build/reports/pitest -type d -maxdepth 3 -mindepth 2 | head -1)
           if [ -d "$PIT_DIR" ]; then
             cp -r "$PIT_DIR"/* coverage/pitest/
@@ -123,27 +98,6 @@ jobs:
           name: coverage-reports
           path: coverage
 
-      # ------------------------------
-      # PR COMMENT
-      # ------------------------------
-      - name: Post Coverage Comment to PR
-        if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          recreate: true
-          message: |
-            ## 📊 CI Coverage Summary
-
-            **JaCoCo Coverage:** `${{ steps.jacoco_extract.outputs.jacoco_coverage }}%`  
-            **PIT Mutation Coverage:** `${{ steps.pit_extract.outputs.pit_coverage }}%`
-
-            📎 **Full HTML Reports:**  
-            ➤ Download via CI Artifacts (`coverage-reports`)  
-
-      # ------------------------------
-      # SNAPSHOTS (history)
-      # ------------------------------
-
       - name: Write JaCoCo snapshot
         run: ./gradlew writeCoverageSnapshot --no-daemon --continue
 
@@ -153,7 +107,7 @@ jobs:
       - name: Prepare CI History folder
         run: |
           mkdir -p ci-history
-          cp .ci-history/* ci-history/ || echo "No previous history"
+          cp -r .ci-history/* ci-history/ || echo "No previous history"
 
       - name: Upload CI History Artifact
         uses: actions/upload-artifact@v4
