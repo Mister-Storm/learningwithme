@@ -1,14 +1,24 @@
 name: CI
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened]
   push:
     branches: [ main ]
-  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   ci:
     name: Build, Test & Coverage
     runs-on: ubuntu-latest
+
     steps:
+      # --------------------------
+      # Checkout & JDK
+      # --------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -18,7 +28,10 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Cache Gradle
+      # --------------------------
+      # Cache
+      # --------------------------
+      - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
           path: |
@@ -28,40 +41,113 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      # --------------------------
+      # Build + Tests
+      # --------------------------
       - name: Build (no tests)
         run: ./gradlew build -x test --no-daemon --continue
 
-      - name: Run Unit Tests
+      - name: Unit Tests
         run: ./gradlew test --no-daemon --continue
 
-      - name: Run Integration Tests
+      - name: Integration Tests
         run: ./gradlew intTest --no-daemon --continue
 
-      - name: Run PIT (allowed to fail)
+      # --------------------------
+      # PIT Mutation (allowed to fail)
+      # --------------------------
+      - name: Mutation Testing (PIT)
+        id: pit
         run: ./gradlew pitest --no-daemon --continue
         continue-on-error: true
 
-      - name: Run Coverage + Snapshots (allowed to fail)
-        run: ./gradlew jacocoMergedReport writeCoverageSnapshot writePitSnapshot --no-daemon --continue
+      # --------------------------
+      # Jacoco merged + snapshots
+      # --------------------------
+      - name: Coverage Report
+        id: jacoco
+        run: ./gradlew jacocoMergedReport --no-daemon --continue
         continue-on-error: true
 
-      - name: Prepare Coverage Artifacts
+      # --------------------------
+      # Extract Jacoco %
+      # --------------------------
+      - name: Extract Jacoco coverage percentage
+        id: jacoco_extract
         run: |
-          set -eux
-          mkdir -p coverage/jacoco coverage/pitest coverage/.ci-history
+          set -e
+
+          REPORT="build/reports/jacoco/jacocoMergedReport/html/index.html"
+          
+          if [ -f "$REPORT" ]; then
+            VALUE=$(grep -Po '(?<=Coverage: )\d+(\.\d+)?' "$REPORT" || echo "")
+          else
+            VALUE=""
+          fi
+
+          if [ -z "$VALUE" ]; then
+            VALUE="n/a"
+          fi
+
+          echo "jacoco_coverage=$VALUE" >> $GITHUB_OUTPUT
+
+      # --------------------------
+      # Extract PIT %
+      # --------------------------
+      - name: Extract PIT mutation percentage
+        id: pit_extract
+        run: |
+          set -e
+
+          REPORT="build/reports/pitest/index.html"
+
+          if [ -f "$REPORT" ]; then
+            VALUE=$(grep -Po '(?<=Mutation Coverage: )\d+(\.\d+)?' "$REPORT" || echo "")
+          else
+            VALUE=""
+          fi
+
+          if [ -z "$VALUE" ]; then
+            VALUE="n/a"
+          fi
+
+          echo "pit_coverage=$VALUE" >> $GITHUB_OUTPUT
+
+      # --------------------------
+      # Upload Artifacts
+      # --------------------------
+      - name: Prepare coverage artifacts
+        run: |
+          mkdir -p coverage/jacoco coverage/pitest
+
           if [ -d build/reports/jacoco/jacocoMergedReport/html ]; then
             cp -r build/reports/jacoco/jacocoMergedReport/html/* coverage/jacoco/
           fi
+
           if [ -d build/reports/pitest ]; then
             cp -r build/reports/pitest/* coverage/pitest/
           fi
-          if [ -d .ci-history ]; then
-            cp -r .ci-history/* coverage/.ci-history/
-          fi
-          find coverage -type f -print
 
-      - name: Upload Coverage Artifacts
+      - name: Upload Coverage Artifact
         uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
           path: coverage
+
+      # --------------------------
+      # STICKY COMMENT NO PR
+      # --------------------------
+      - name: Post Coverage Comment to PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          message: |
+            ## 📊 CI Coverage Summary
+
+            **JaCoCo Coverage:** `${{ steps.jacoco_extract.outputs.jacoco_coverage }}%`  
+            **PIT Mutation Coverage:** `${{ steps.pit_extract.outputs.pit_coverage }}%`
+
+            📎 *Full HTML Reports:*  
+            ➤ Download via CI Artifacts (`coverage-reports`)  
+

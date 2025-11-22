@@ -27,11 +27,16 @@ class CreateUserUseCase(
             }
             input
                 .toUserEntity()
-                .also { user ->
-                    dbTransaction.runInTransaction {
-                        userRepository.save(user).bind()
-                        publisher.publishUserCreatedEvent(user).bind()
-                    }
-                }.toUserResponse()
+                .save()
+                .bind()
+        }
+
+    private suspend fun User.save(): Either<CreateUserError, UserResponse> =
+        either {
+            dbTransaction.runInTransaction {
+                userRepository.save(this@save).bind()
+                publisher.publishUserCreatedEvent(this@save).bind()
+                this@save.toUserResponse()
+            }
         }
 }
