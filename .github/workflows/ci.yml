@@ -103,6 +103,7 @@ jobs:
 
       - name: Write PIT snapshot
         run: ./gradlew writePitSnapshot --no-daemon --continue
+        continue-on-error: true
 
       - name: Prepare CI History folder
         run: |

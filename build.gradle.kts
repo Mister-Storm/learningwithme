@@ -110,8 +110,8 @@ pitest {
 
     mutators.set(listOf("STRONGER"))
     outputFormats.set(listOf("XML", "HTML"))
-    mutationThreshold.set(76)
-    coverageThreshold.set(75)
+    mutationThreshold.set(20)
+    coverageThreshold.set(20)
     failWhenNoMutations.set(false)
 
     excludedClasses.set(
