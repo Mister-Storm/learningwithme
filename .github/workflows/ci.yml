@@ -1,129 +1,117 @@
 name: CI
 
 on:
-  push:
-    branches: ["**"]
   pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [ main ]
 
 permissions:
   contents: read
-  pages: write
+  pull-requests: write
 
 jobs:
-  build:
-    name: Build & Tests
+  ci:
+    name: Build, Test & Coverage
     runs-on: ubuntu-latest
-    outputs:
-      run_id: ${{ github.run_id }}
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup JDK 21
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      - name: Cache Gradle
+      - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-      - name: 🔹 Run KtLint
-        run: ./gradlew ktlintCheck --no-daemon
+      - name: Build (no tests)
+        run: ./gradlew build -x test --no-daemon --continue
 
-      - name: 🔹 Build (compile only)
-        run: ./gradlew build -x test --no-daemon
+      - name: Run Unit Tests
+        run: ./gradlew test --no-daemon --continue
 
-      - name: 🔹 Unit Tests
-        run: ./gradlew test --no-daemon
+      - name: Run Integration Tests
+        run: ./gradlew intTest --no-daemon --continue
 
-      - name: 🔹 Integration Tests
-        run: ./gradlew intTest --no-daemon
-
-      - name: 🔹 Mutation Testing (PIT) — allowed to fail
-        run: ./gradlew pitest --no-daemon
+      - name: Mutation Testing (PIT)
+        id: pit
+        run: ./gradlew pitest --no-daemon --continue
         continue-on-error: true
 
-      - name: 🔹 Coverage Report + Snapshot — allowed to fail
-        run: ./gradlew jacocoMergedReport writeCoverageSnapshot writePitSnapshot --no-daemon
+      - name: Generate Jacoco merged coverage
+        id: jacoco
+        run: ./gradlew jacocoMergedReport --no-daemon --continue
         continue-on-error: true
 
-      - name: Create coverage-badge.json (for Shields)
+      - name: Extract Jacoco Coverage %
+        id: jacoco_extract
         run: |
-          mkdir -p .ci-history
-          LAST=$(tail -n 1 .ci-history/history.json 2>/dev/null || echo '{"branch":"unknown","timestamp":0,"coverage":0}')
-          # try to extract coverage as digits
-          COVERAGE=$(echo "$LAST" | sed -n 's/.*"coverage":\([0-9][0-9]*\).*/\1/p' || echo "0")
-          cat > .ci-history/coverage-badge.json <<EOF
-          {
-            "schemaVersion":1,
-            "label":"coverage",
-            "message":"${COVERAGE}%",
-            "color":"${COVERAGE:-0}"
-          }
-          EOF
+          set -e
+          REPORT="build/reports/jacoco/jacocoMergedReport/xml/report.xml"
+          if [ -f "$REPORT" ]; then
+            VALUE=$(xmllint --xpath 'string(//report/counter[@type="LINE"]/@covered)' $REPORT)
+            TOTAL=$(xmllint --xpath 'string(//report/counter[@type="LINE"]/@missed)' $REPORT)
+            TOTAL_COVERED=$((VALUE + TOTAL))
+            PERCENT=$((VALUE * 100 / TOTAL_COVERED))
+            echo "jacoco_coverage=$PERCENT" >> $GITHUB_OUTPUT
+          else
+            echo "jacoco_coverage=n/a" >> $GITHUB_OUTPUT
+          fi
 
-      - name: 📦 Upload Reports (JaCoCo, PIT, .ci-history)
+      - name: Extract PIT Mutation %
+        id: pit_extract
+        run: |
+          set -e
+          REPORT=$(find build/reports/pitest -name "index.html" | head -1)
+          if [ -n "$REPORT" ]; then
+            VALUE=$(grep -Po 'Mutation Coverage[^%]*\K[0-9]+' "$REPORT" || true)
+            echo "pit_coverage=$VALUE" >> $GITHUB_OUTPUT
+          else
+            echo "pit_coverage=n/a" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Collect HTML reports
+        run: |
+          mkdir -p coverage/jacoco coverage/pitest
+          if [ -d build/reports/jacoco/jacocoMergedReport/html ]; then
+            cp -r build/reports/jacoco/jacocoMergedReport/html/* coverage/jacoco/
+          fi
+          PIT_DIR=$(find build/reports/pitest -type d -maxdepth 3 -mindepth 2 | head -1)
+          if [ -d "$PIT_DIR" ]; then
+            cp -r "$PIT_DIR"/* coverage/pitest/
+          fi
+
+      - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
-          path: |
-            build/reports/jacoco/jacocoMergedReport/html
-            build/reports/pitest
-            .ci-history
+          path: coverage
 
-  pr-report:
-    name: PR Coverage Report
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Download reports artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-reports
-          path: ./artifacts
+      - name: Write JaCoCo snapshot
+        run: ./gradlew writeCoverageSnapshot --no-daemon --continue
 
-      - name: Parse coverage & mutation values
-        id: parse
+      - name: Write PIT snapshot
+        run: ./gradlew writePitSnapshot --no-daemon --continue
+        continue-on-error: true
+
+      - name: Prepare CI History folder
         run: |
-          set -e
-          COVERAGE="n/a"
-          MUTATION="n/a"
+          mkdir -p ci-history
+          cp -r .ci-history/* ci-history/ || echo "No previous history"
 
-          # try JaCoCo merged html
-          if [ -f ./artifacts/jacocoMergedReport/html/index.html ]; then
-            # try to pick a percent like "Line coverage XX%"
-            COVERAGE=$(grep -oP 'Line coverage.*?>\K[0-9]{1,3}' ./artifacts/jacocoMergedReport/html/index.html | head -1 || true)
-          fi
-
-          # fallback to history
-          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "n/a" ]; then
-            if [ -f ./artifacts/.ci-history/history.json ]; then
-              COVERAGE=$(tail -n1 ./artifacts/.ci-history/history.json | sed -n 's/.*"coverage":\([0-9][0-9]*\).*/\1/p' || true)
-            fi
-          fi
-
-          # mutation coverage
-          if [ -f ./artifacts/pitest/index.html ]; then
-            MUTATION=$(grep -oP 'Mutation Coverage.*?>\K[0-9]{1,3}' ./artifacts/pitest/index.html | head -1 || true)
-          fi
-
-          echo "::set-output name=coverage::${COVERAGE:-n/a}"
-          echo "::set-output name=mutation::${MUTATION:-n/a}"
-
-      - name: Create or update PR comment
-        uses: marocchino/sticky-pull-request-comment@v2
+      - name: Upload CI History Artifact
+        uses: actions/upload-artifact@v4
         with:
-          recreate: true
-          message: |
-            ## 📊 CI Coverage summary
-            - **JaCoCo coverage:** `${{ steps.parse.outputs.coverage }}%`
-            - **PIT mutation coverage:** `${{ steps.parse.outputs.mutation }}%`
-            - Reports (JaCoCo & PIT) and `.ci-history` archived as workflow artifacts in the build job.
-            - Note: mutation & coverage steps are allowed-to-fail in CI (they won't block the merge).
+          name: ci-history
+          path: ci-history

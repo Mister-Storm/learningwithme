@@ -4,14 +4,7 @@ package br.com.learningwithme.learningwithme.modules.shared.api
 value class Email(
     val value: String,
 ) {
-    init {
-        isValid(value)
-    }
-
     companion object {
-        fun isValid(email: String) {
-            require(email.isNotEmpty()) { "Email cannot be empty" }
-            require(email.contains("@")) { "Invalid email" }
-        }
+        fun isValid(email: String): Boolean = email.isNotEmpty() && email.contains("@")
     }
 }

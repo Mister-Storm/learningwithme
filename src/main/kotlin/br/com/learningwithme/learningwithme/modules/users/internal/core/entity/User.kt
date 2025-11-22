@@ -14,6 +14,7 @@ data class User(
     val lastName: String,
     val address: Address,
     val status: Status,
+    val token: String,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

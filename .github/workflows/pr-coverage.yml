@@ -1,0 +1,62 @@
+name: PR Coverage Report
+
+on:
+  workflow_run:
+    workflows: [ "CI" ]
+    types: [completed]
+
+jobs:
+  pr-report:
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-reports
+          path: ./artifacts
+
+      - name: Debug artifact content
+        run: |
+          echo "=== Artifact files ==="
+          find ./artifacts -type f
+
+      - name: Parse coverage & mutation
+        id: parse
+        run: |
+          COVERAGE="n/a"
+          MUTATION="n/a"
+
+          JACOCO_INDEX=$(find ./artifacts -path "*/html/index.html" | head -1)
+          if [ -n "$JACOCO_INDEX" ]; then
+            COVERAGE=$(grep -oP 'Line coverage.*?>\K[0-9]{1,3}' "$JACOCO_INDEX" | head -1 || true)
+          fi
+
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "n/a" ]; then
+            if [ -f "./artifacts/.ci-history/history.json" ]; then
+              COVERAGE=$(sed -n 's/.*"coverage":\([0-9]\+\).*/\1/p' ./artifacts/.ci-history/history.json | tail -1)
+            fi
+          fi
+
+          PIT_INDEX=$(find ./artifacts -path "*/pitest/*/index.html" | head -1)
+          if [ -n "$PIT_INDEX" ]; then
+            MUTATION=$(grep -oP 'Mutation Coverage.*?>\K[0-9]{1,3}' "$PIT_INDEX" | head -1 || true)
+          fi
+
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          echo "mutation=$MUTATION" >> $GITHUB_OUTPUT
+
+      - name: Comment coverage summary on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          message: |
+            ## 📊 CI Coverage summary
+            - **JaCoCo coverage:** `${{ steps.parse.outputs.coverage }}%`
+            - **PIT mutation coverage:** `${{ steps.parse.outputs.mutation }}%`
+            - Reports (JaCoCo & PIT) and `.ci-history` archived as workflow artifacts.
+            - Note: mutation & coverage steps são *allowed-to-fail*.
