@@ -209,40 +209,32 @@ tasks.register("writeCoverageSnapshot") {
     dependsOn("jacocoMergedReport")
 
     doLast {
-        val xmlReport =
+        val xmlReportFile =
             layout.buildDirectory
-                .file("reports/jacoco/jacocoMergedReport/report.xml")
+                .file("reports/jacoco/jacocoMergedReport/xml/report.xml")
                 .get()
                 .asFile
-        if (!xmlReport.exists()) throw GradleException("JaCoCo XML not found: ${xmlReport.path}")
 
-        val db =
-            javax.xml.parsers.DocumentBuilderFactory
-                .newInstance()
-                .newDocumentBuilder()
-        val doc = db.parse(xmlReport)
-
-        val counters = doc.getElementsByTagName("counter")
-        var covered = 0.0
-        var missed = 0.0
-        for (i in 0 until counters.length) {
-            val node = counters.item(i)
-            val attrs = node.attributes
-            val typeNode = attrs.getNamedItem("type")
-            if (typeNode != null && typeNode.nodeValue == "LINE") {
-                covered = attrs.getNamedItem("covered").nodeValue.toDouble()
-                missed = attrs.getNamedItem("missed").nodeValue.toDouble()
-            }
+        if (!xmlReportFile.exists()) {
+            println("⚠️ JaCoCo XML not found, skipping snapshot")
+            return@doLast
         }
 
-        val percent = if ((covered + missed) == 0.0) 0 else ((covered / (covered + missed)) * 100).toInt()
+        val percent =
+            (
+                xmlReportFile
+                    .readText()
+                    .substringAfter("line-rate=\"")
+                    .substringBefore("\"")
+                    .toDouble() * 100
+            ).toInt()
 
         val branch = System.getenv("GITHUB_REF_NAME") ?: "local"
         val timestamp = Instant.now().epochSecond
 
         val historyFile = layout.projectDirectory.file(".ci-history/history.json").asFile
         historyFile.parentFile.mkdirs()
-        historyFile.appendText("{" + "\"branch\":\"$branch\",\"timestamp\":$timestamp,\"coverage\":$percent}" + "\n")
+        historyFile.appendText("""{"branch":"$branch","timestamp":$timestamp,"coverage":$percent}""" + "\n")
 
         println("📁 Saved coverage snapshot in ${historyFile.path}")
     }
