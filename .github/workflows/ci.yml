@@ -58,7 +58,7 @@ jobs:
         id: jacoco_extract
         run: |
           set -e
-          REPORT="build/reports/jacoco/jacocoMergedReport/xml/report.xml"
+          REPORT="build/reports/jacoco/jacocoMergedReport/report.xml"
           if [ -f "$REPORT" ]; then
             VALUE=$(xmllint --xpath 'string(//report/counter[@type="LINE"]/@covered)' $REPORT)
             TOTAL=$(xmllint --xpath 'string(//report/counter[@type="LINE"]/@missed)' $REPORT)

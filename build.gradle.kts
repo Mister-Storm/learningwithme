@@ -211,7 +211,7 @@ tasks.register("writeCoverageSnapshot") {
     doLast {
         val xmlReportFile =
             layout.buildDirectory
-                .file("reports/jacoco/jacocoMergedReport/xml/report.xml")
+                .file("reports/jacoco/jacocoMergedReport/report.xml")
                 .get()
                 .asFile
 
