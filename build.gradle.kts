@@ -1,4 +1,5 @@
 import org.gradle.testing.jacoco.tasks.JacocoReport
+import java.io.StringReader
 import java.time.Instant
 
 plugins {
@@ -172,10 +173,25 @@ tasks.register("checkCoverage") {
                 .asFile
         if (!xmlReport.exists()) throw GradleException("❌ JaCoCo XML report not found: ${xmlReport.path}")
 
-        val db =
+        val dbf =
             javax.xml.parsers.DocumentBuilderFactory
                 .newInstance()
-                .newDocumentBuilder()
+        dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+        dbf.setFeature("http://xml.org/sax/features/validation", false)
+        dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", false)
+        dbf.isValidating = false
+        dbf.isNamespaceAware = false
+
+        val db = dbf.newDocumentBuilder()
+
+        db.setEntityResolver(
+            object : org.xml.sax.EntityResolver {
+                override fun resolveEntity(
+                    publicId: String?,
+                    systemId: String?,
+                ) = org.xml.sax.InputSource(StringReader(""))
+            },
+        )
         val doc = db.parse(xmlReport)
 
         val counters = doc.getElementsByTagName("counter")
@@ -219,15 +235,18 @@ tasks.register("writeCoverageSnapshot") {
             println("⚠️ JaCoCo XML not found, skipping snapshot")
             return@doLast
         }
+        val xml = xmlReportFile.readText()
+        val regex = Regex("""<counter type="LINE" missed="(\d+)" covered="(\d+)"""")
+        val match = regex.find(xml)
 
-        val percent =
-            (
-                xmlReportFile
-                    .readText()
-                    .substringAfter("line-rate=\"")
-                    .substringBefore("\"")
-                    .toDouble() * 100
-            ).toInt()
+        if (match == null) {
+            println("❌ LINE counter not found in JaCoCo XML")
+            return@doLast
+        }
+
+        val missed = match.groupValues[1].toDouble()
+        val covered = match.groupValues[2].toDouble()
+        val percent = ((covered / (covered + missed)) * 100).toInt()
 
         val branch = System.getenv("GITHUB_REF_NAME") ?: "local"
         val timestamp = Instant.now().epochSecond
