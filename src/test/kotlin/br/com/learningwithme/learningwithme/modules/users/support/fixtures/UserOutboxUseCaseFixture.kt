@@ -6,9 +6,15 @@ import arrow.core.right
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.UserOutbox
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.OutboxError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.repository.UserOutboxRepository
+import br.com.learningwithme.learningwithme.modules.users.support.fixtures.UserOutboxFixture.DEFAULT_USER_OUTBOX
 
 object UserOutboxUseCaseFixture {
-    val SUCCESS_OUTBOX_REPOSITORY: UserOutboxRepository = object : DefaultUserOutboxUseCase() {}
+    val savedOutboxes = listOf(DEFAULT_USER_OUTBOX)
+    val SUCCESS_OUTBOX_REPOSITORY: UserOutboxRepository =
+        object : DefaultUserOutboxUseCase() {
+            override fun getAllUnpublishedEvents(limit: Int): Either<OutboxError.PersistenceFailure, List<UserOutbox>> =
+                savedOutboxes.right()
+        }
     val ERROR_OUTBOX_REPOSITORY: UserOutboxRepository =
         object : DefaultUserOutboxUseCase() {
             override fun save(userOutbox: UserOutbox): Either<OutboxError.PersistenceFailure, UserOutbox> =
