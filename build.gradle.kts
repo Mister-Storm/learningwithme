@@ -251,7 +251,7 @@ tasks.register("writeCoverageSnapshot") {
         val branch = System.getenv("GITHUB_REF_NAME") ?: "local"
         val timestamp = Instant.now().epochSecond
 
-        val historyFile = layout.projectDirectory.file(".ci-history/history.json").asFile
+        val historyFile = layout.projectDirectory.file("./build/ci-history/history.json").asFile
         historyFile.parentFile.mkdirs()
         historyFile.appendText("""{"branch":"$branch","timestamp":$timestamp,"coverage":$percent}""" + "\n")
 
