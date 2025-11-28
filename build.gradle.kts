@@ -251,7 +251,7 @@ tasks.register("writeCoverageSnapshot") {
         val branch = System.getenv("GITHUB_REF_NAME") ?: "local"
         val timestamp = Instant.now().epochSecond
 
-        val historyFile = layout.projectDirectory.file("./build/ci-history/history.json").asFile
+        val historyFile = layout.projectDirectory.file("./.ci-history/history.json").asFile
         historyFile.parentFile.mkdirs()
         historyFile.appendText("""{"branch":"$branch","timestamp":$timestamp,"coverage":$percent}""" + "\n")
 
@@ -267,27 +267,47 @@ tasks.register("writePitSnapshot") {
     dependsOn("pitest")
 
     doLast {
-        // pit generates a folder build/reports/pitest/<timestamp>/index.html
         val pitIndex =
             fileTree(layout.buildDirectory.dir("reports/pitest")) {
                 include("**/index.html")
-            }.files.firstOrNull()
+            }.files.maxByOrNull { it.lastModified() }
 
         val outDir = layout.projectDirectory.file(".ci-history").asFile
         outDir.mkdirs()
         val outFile = outDir.resolve("pit-summary.json")
 
-        val mutationCoverage =
-            if (pitIndex != null && pitIndex.exists()) {
-                val content = pitIndex.readText()
-                // crude extraction: find first occurrence of 'Mutation Coverage' and grab number before %
-                val m = Regex("Mutation Coverage[^%>]*>(\\d+)").find(content)
-                m?.groupValues?.get(1)?.toIntOrNull()
-            } else {
-                null
-            }
+        if (pitIndex == null || !pitIndex.exists()) {
+            outFile.writeText("""{"lineCoverage": null, "mutationCoverage": null}""")
+            println("📁 Saved PIT snapshot in ${outFile.path}")
+            return@doLast
+        }
 
-        outFile.writeText("{" + "\"mutationCoverage\":${mutationCoverage ?: "null"}}")
+        val html = pitIndex.readText()
+
+        val percentageRegex = Regex("""(\d+)%""")
+        val matches = percentageRegex.findAll(html).toList()
+
+        if (matches.size < 3) {
+            outFile.writeText("""{"lineCoverage": null, "mutationCoverage": null}""")
+            println("📁 Saved PIT snapshot in ${outFile.path}")
+            return@doLast
+        }
+
+        val lineCoverage = matches[0].groupValues[1].toInt()
+        val mutationCoverage = matches[1].groupValues[1].toInt()
+
+        val json =
+            """
+            {
+              "lineCoverage": $lineCoverage,
+              "mutationCoverage": $mutationCoverage
+            }
+            """.trimIndent()
+
+        outFile.writeText(json)
+
+        println("📊 Line Coverage: $lineCoverage%")
+        println("🧬 Mutation Coverage: $mutationCoverage%")
         println("📁 Saved PIT snapshot in ${outFile.path}")
     }
 }
