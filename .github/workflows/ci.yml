@@ -95,7 +95,7 @@ jobs:
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-reports
+          name: history.json
           path: coverage
 
       - name: Write JaCoCo snapshot
