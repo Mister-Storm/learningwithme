@@ -21,10 +21,12 @@ class CreateUserUseCase(
     override suspend fun invoke(input: CreateUserCommand): Either<CreateUserError, UserResponse> =
         either {
             UserValidator.validUser(input).bind()
-            val existingEmail: User? = userRepository.findByEmail(input.email).bind()
-            if (existingEmail != null) {
-                raise(CreateUserError.EmailAlreadyExists)
-            }
+            userRepository
+                .findByEmail(input.email)
+                .bind()
+                ?.let {
+                    raise(CreateUserError.EmailAlreadyExists)
+                }
             input
                 .toUserEntity()
                 .save()

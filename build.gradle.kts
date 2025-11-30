@@ -1,4 +1,5 @@
 import org.gradle.testing.jacoco.tasks.JacocoReport
+import java.io.StringReader
 import java.time.Instant
 
 plugins {
@@ -172,10 +173,25 @@ tasks.register("checkCoverage") {
                 .asFile
         if (!xmlReport.exists()) throw GradleException("❌ JaCoCo XML report not found: ${xmlReport.path}")
 
-        val db =
+        val dbf =
             javax.xml.parsers.DocumentBuilderFactory
                 .newInstance()
-                .newDocumentBuilder()
+        dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+        dbf.setFeature("http://xml.org/sax/features/validation", false)
+        dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", false)
+        dbf.isValidating = false
+        dbf.isNamespaceAware = false
+
+        val db = dbf.newDocumentBuilder()
+
+        db.setEntityResolver(
+            object : org.xml.sax.EntityResolver {
+                override fun resolveEntity(
+                    publicId: String?,
+                    systemId: String?,
+                ) = org.xml.sax.InputSource(StringReader(""))
+            },
+        )
         val doc = db.parse(xmlReport)
 
         val counters = doc.getElementsByTagName("counter")
@@ -211,7 +227,7 @@ tasks.register("writeCoverageSnapshot") {
     doLast {
         val xmlReportFile =
             layout.buildDirectory
-                .file("reports/jacoco/jacocoMergedReport/xml/report.xml")
+                .file("reports/jacoco/jacocoMergedReport/report.xml")
                 .get()
                 .asFile
 
@@ -219,20 +235,23 @@ tasks.register("writeCoverageSnapshot") {
             println("⚠️ JaCoCo XML not found, skipping snapshot")
             return@doLast
         }
+        val xml = xmlReportFile.readText()
+        val regex = Regex("""<counter type="LINE" missed="(\d+)" covered="(\d+)"""")
+        val match = regex.find(xml)
 
-        val percent =
-            (
-                xmlReportFile
-                    .readText()
-                    .substringAfter("line-rate=\"")
-                    .substringBefore("\"")
-                    .toDouble() * 100
-            ).toInt()
+        if (match == null) {
+            println("❌ LINE counter not found in JaCoCo XML")
+            return@doLast
+        }
+
+        val missed = match.groupValues[1].toDouble()
+        val covered = match.groupValues[2].toDouble()
+        val percent = ((covered / (covered + missed)) * 100).toInt()
 
         val branch = System.getenv("GITHUB_REF_NAME") ?: "local"
         val timestamp = Instant.now().epochSecond
 
-        val historyFile = layout.projectDirectory.file(".ci-history/history.json").asFile
+        val historyFile = layout.projectDirectory.file("./.ci-history/history.json").asFile
         historyFile.parentFile.mkdirs()
         historyFile.appendText("""{"branch":"$branch","timestamp":$timestamp,"coverage":$percent}""" + "\n")
 
@@ -248,27 +267,47 @@ tasks.register("writePitSnapshot") {
     dependsOn("pitest")
 
     doLast {
-        // pit generates a folder build/reports/pitest/<timestamp>/index.html
         val pitIndex =
             fileTree(layout.buildDirectory.dir("reports/pitest")) {
                 include("**/index.html")
-            }.files.firstOrNull()
+            }.files.maxByOrNull { it.lastModified() }
 
         val outDir = layout.projectDirectory.file(".ci-history").asFile
         outDir.mkdirs()
         val outFile = outDir.resolve("pit-summary.json")
 
-        val mutationCoverage =
-            if (pitIndex != null && pitIndex.exists()) {
-                val content = pitIndex.readText()
-                // crude extraction: find first occurrence of 'Mutation Coverage' and grab number before %
-                val m = Regex("Mutation Coverage[^%>]*>(\\d+)").find(content)
-                m?.groupValues?.get(1)?.toIntOrNull()
-            } else {
-                null
-            }
+        if (pitIndex == null || !pitIndex.exists()) {
+            outFile.writeText("""{"lineCoverage": null, "mutationCoverage": null}""")
+            println("📁 Saved PIT snapshot in ${outFile.path}")
+            return@doLast
+        }
 
-        outFile.writeText("{" + "\"mutationCoverage\":${mutationCoverage ?: "null"}}")
+        val html = pitIndex.readText()
+
+        val percentageRegex = Regex("""(\d+)%""")
+        val matches = percentageRegex.findAll(html).toList()
+
+        if (matches.size < 3) {
+            outFile.writeText("""{"lineCoverage": null, "mutationCoverage": null}""")
+            println("📁 Saved PIT snapshot in ${outFile.path}")
+            return@doLast
+        }
+
+        val lineCoverage = matches[0].groupValues[1].toInt()
+        val mutationCoverage = matches[1].groupValues[1].toInt()
+
+        val json =
+            """
+            {
+              "lineCoverage": $lineCoverage,
+              "mutationCoverage": $mutationCoverage
+            }
+            """.trimIndent()
+
+        outFile.writeText(json)
+
+        println("📊 Line Coverage: $lineCoverage%")
+        println("🧬 Mutation Coverage: $mutationCoverage%")
         println("📁 Saved PIT snapshot in ${outFile.path}")
     }
 }
