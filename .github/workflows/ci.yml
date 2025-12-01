@@ -113,8 +113,8 @@ jobs:
       - name: Upload CI History Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: .ci-history
-          path: .ci-history/*
+          name: ci-history
+          path: ${{ github.workspace }}/.ci-history
 
       - name: Debug CI history folder
         run: |
