@@ -19,7 +19,7 @@ jobs:
       - name: Download CI history artifact
         uses: actions/download-artifact@v4
         with:
-          path: ./ci-history
+          path: /ci-history
           name: ci-history
 
       - name: Setup Pages
@@ -28,4 +28,4 @@ jobs:
       - name: Upload to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./ci-history
+          path: /ci-history
