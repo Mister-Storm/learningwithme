@@ -105,8 +105,18 @@ jobs:
         run: ./gradlew writePitSnapshot --no-daemon --continue
         continue-on-error: true
 
+      - name: Prepare CI History folder
+        run: |
+          mkdir -p ci-history
+          cp -r .ci-history/* ci-history/ || echo "No previous history"
+
       - name: Upload CI History Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ci-history
           path: .ci-history
+
+      - name: Debug CI history folder
+        run: |
+          echo "Contents of .ci-history:"
+          ls -R .ci-history || echo "Folder .ci-history not found"
