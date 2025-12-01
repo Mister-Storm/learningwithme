@@ -110,9 +110,8 @@ jobs:
 
       - name: Prepare CI History folder
         run: |
-          mkdir -p ci-history
           mkdir -p .ci-history
-          cp -r .ci-history/* ci-history/ || echo "No previous history"
+          cp -r .ci-history/* .ci-history/ || echo "No previous history"
       
 
       - name: Upload CI History Artifact
