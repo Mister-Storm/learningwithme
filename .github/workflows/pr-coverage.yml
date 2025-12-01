@@ -17,7 +17,7 @@ jobs:
       - name: Download coverage artifact
         uses: actions/download-artifact@v4
         with:
-          name: ci-history
+          name: history.json
           path: ./artifacts/*
 
       - name: Debug artifact content
