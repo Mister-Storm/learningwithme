@@ -120,3 +120,11 @@ jobs:
         run: |
           echo "Contents of .ci-history:"
           ls -R .ci-history || echo "Folder .ci-history not found"
+      - name: Debug absolute paths
+        run: |
+          echo "Workspace is: ${{ github.workspace }}"
+          echo "Listing workspace:"
+          ls -a ${{ github.workspace }}
+          echo "Listing ci-history:"
+          ls -R ${{ github.workspace }}/.ci-history || echo "ci-history not found here"
+
