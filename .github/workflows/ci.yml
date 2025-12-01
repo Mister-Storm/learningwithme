@@ -95,7 +95,7 @@ jobs:
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: history.json
+          name: coverage
           path: coverage
 
       - name: Write JaCoCo snapshot
@@ -114,4 +114,17 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ci-history
-          path: ci-history
+          path: ${{ github.workspace }}/ci-history
+
+      - name: Debug CI history folder
+        run: |
+          echo "Contents of .ci-history:"
+          ls -R .ci-history || echo "Folder .ci-history not found"
+      - name: Debug absolute paths
+        run: |
+          echo "Workspace is: ${{ github.workspace }}"
+          echo "Listing workspace:"
+          ls -a ${{ github.workspace }}
+          echo "Listing ci-history:"
+          ls -R ${{ github.workspace }}/.ci-history || echo "ci-history not found here"
+

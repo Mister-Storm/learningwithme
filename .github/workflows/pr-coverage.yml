@@ -2,7 +2,7 @@ name: PR Coverage Report
 
 on:
   workflow_run:
-    workflows: [ "CI" ]
+    workflows: ["CI"]
     types: [completed]
 
 jobs:
@@ -14,37 +14,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download coverage artifact
+      - name: Download CI History Artifact
         uses: actions/download-artifact@v4
         with:
           name: ci-history
-          path: ./artifacts
+          path: ./artifacts/ci-history
 
-      - name: Debug artifact content
+      - name: Debug artifact files
         run: |
-          echo "=== Artifact files ==="
+          echo "=== Downloaded artifact ==="
           find ./artifacts -type f
 
-      - name: Parse coverage & mutation
+      - name: Parse coverage & mutation results
         id: parse
         run: |
           COVERAGE="n/a"
           MUTATION="n/a"
 
-          JACOCO_INDEX=$(find ./artifacts -path "*/html/index.html" | head -1)
-          if [ -n "$JACOCO_INDEX" ]; then
-            COVERAGE=$(grep -oP 'Line coverage.*?>\K[0-9]{1,3}' "$JACOCO_INDEX" | head -1 || true)
+          HISTORY_JSON="./artifacts/ci-history/history.json"
+          PIT_JSON="./artifacts/ci-history/pit-summary.json"
+
+          if [ -f "$HISTORY_JSON" ]; then
+            COVERAGE=$(sed -n 's/.*"coverage":\([0-9]\+\).*/\1/p' "$HISTORY_JSON" | tail -1)
           fi
 
-          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "n/a" ]; then
-            if [ -f "./artifacts/.ci-history/history.json" ]; then
-              COVERAGE=$(sed -n 's/.*"coverage":\([0-9]\+\).*/\1/p' ./artifacts/.ci-history/history.json | tail -1)
-            fi
-          fi
-
-          PIT_INDEX=$(find ./artifacts -path "*/pitest/*/index.html" | head -1)
-          if [ -n "$PIT_INDEX" ]; then
-            MUTATION=$(grep -oP 'Mutation Coverage.*?>\K[0-9]{1,3}' "$PIT_INDEX" | head -1 || true)
+          if [ -f "$PIT_JSON" ]; then
+            MUTATION=$(sed -n 's/.*"mutation":\([0-9]\+\).*/\1/p' "$PIT_JSON" | tail -1)
           fi
 
           echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
@@ -55,8 +50,9 @@ jobs:
         with:
           recreate: true
           message: |
-            ## 📊 CI Coverage summary
+            ## 📊 CI Coverage Summary
             - **JaCoCo coverage:** `${{ steps.parse.outputs.coverage }}%`
             - **PIT mutation coverage:** `${{ steps.parse.outputs.mutation }}%`
-            - Reports (JaCoCo & PIT) and `.ci-history` archived as workflow artifacts.
-            - Note: mutation & coverage steps são *allowed-to-fail*.
+            - Artifacts disponíveis no workflow:
+              - `history.json`
+              - `pit-summary.json`
