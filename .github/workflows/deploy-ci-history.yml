@@ -20,7 +20,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./ci-history
-          name: history.json
+          name: ci-history
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

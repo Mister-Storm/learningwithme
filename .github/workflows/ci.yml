@@ -95,7 +95,7 @@ jobs:
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: history.json
+          name: coverage
           path: coverage
 
       - name: Write JaCoCo snapshot
@@ -105,10 +105,15 @@ jobs:
         run: ./gradlew writePitSnapshot --no-daemon --continue
         continue-on-error: true
 
+      - name: Ensure .ci-history exists
+        run: mkdir -p .ci-history
+
       - name: Prepare CI History folder
         run: |
           mkdir -p ci-history
+          mkdir -p .ci-history
           cp -r .ci-history/* ci-history/ || echo "No previous history"
+      
 
       - name: Upload CI History Artifact
         uses: actions/upload-artifact@v4

@@ -37,7 +37,7 @@ jobs:
           fi
 
           if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "n/a" ]; then
-            if [ -f "./artifacts/.ci-history/history.json" ]; then
+            if [ -f "./artifacts/ci-history/history.json" ]; then
               COVERAGE=$(sed -n 's/.*"coverage":\([0-9]\+\).*/\1/p' ./artifacts/.ci-history/history.json | tail -1)
             fi
           fi
