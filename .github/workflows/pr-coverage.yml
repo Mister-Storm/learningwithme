@@ -39,7 +39,8 @@ jobs:
           fi
 
           if [ -f "$PIT_JSON" ]; then
-            MUTATION=$(sed -n 's/.*"mutation":\([0-9]\+\).*/\1/p' "$PIT_JSON" | tail -1)
+            # Expecting keys {"lineCoverage": X, "mutationCoverage": Y}
+            MUTATION=$(sed -n 's/.*"mutationCoverage":\([0-9]\+\).*/\1/p' "$PIT_JSON" | tail -1)
           fi
 
           echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
