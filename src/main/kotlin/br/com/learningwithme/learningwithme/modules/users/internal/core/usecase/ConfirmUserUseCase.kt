@@ -6,6 +6,7 @@ import br.com.learningwithme.learningwithme.modules.shared.api.UseCase
 import br.com.learningwithme.learningwithme.modules.users.internal.core.adapter.PasswordHashingAdapter
 import br.com.learningwithme.learningwithme.modules.users.internal.core.command.ConfirmUserCommand
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.Status
+import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.UserAuth
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.ConfirmUserError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.publisher.UserEventProducer
@@ -28,30 +29,41 @@ class ConfirmUserUseCase(
             validStatusToConfirm(user).bind()
             passwordHashing
                 .hashPassword(input.password)
-                .mapLeft { ConfirmUserError.UnexpectedError }
-                .bind()
+                .mapLeft {
+                    logger.error("Error hashing password for userId=${user.id}")
+                    ConfirmUserError.UnexpectedError
+                }.bind()
                 .let {
                     dbTransaction.runInTransaction {
-                        val updatedUser =
-                            userRepository
-                                .update(
-                                    user.copy(
-                                        status = Status.ENABLED,
-                                        updatedAt = Instant.now(),
-                                    ),
-                                ).bind()
                         userRepository
-                            .saveUserAuth(
-                                UserAuth(
-                                    userId = updatedUser.id,
-                                    createdAt = Instant.now(),
-                                    email = updatedUser.email.value,
-                                    passwordHash = it,
-                                ),
+                            .update(
+                                updatedUser(user),
                             ).bind()
-                        publisher.publishUserUpdatedEvent(updatedUser)
-                        updatedUser.toUserResponse()
+                            .let { updatedUser ->
+                                userRepository
+                                    .saveUserAuth(
+                                        createUserAuth(updatedUser, it),
+                                    ).bind()
+                                publisher.publishUserUpdatedEvent(updatedUser)
+                                updatedUser.toUserResponse()
+                            }
                     }
                 }
         }
+
+    private fun createUserAuth(
+        updatedUser: User,
+        it: String,
+    ) = UserAuth(
+        userId = updatedUser.id,
+        createdAt = Instant.now(),
+        email = updatedUser.email.value,
+        passwordHash = it,
+    )
+
+    private fun updatedUser(user: User) =
+        user.copy(
+            status = Status.ENABLED,
+            updatedAt = Instant.now(),
+        )
 }
