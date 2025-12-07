@@ -1,7 +1,9 @@
 package br.com.learningwithme.learningwithme.modules.users.internal.core.usecase
 
 import arrow.core.Either
+import arrow.core.Option
 import arrow.core.raise.either
+import arrow.core.toOption
 import br.com.learningwithme.learningwithme.modules.shared.api.UseCase
 import br.com.learningwithme.learningwithme.modules.users.internal.core.command.CreateUserCommand
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
@@ -20,16 +22,27 @@ class CreateUserUseCase(
 ) : UseCase<CreateUserCommand, CreateUserError, UserResponse>() {
     override suspend fun invoke(input: CreateUserCommand): Either<CreateUserError, UserResponse> =
         either {
+            logger.info(
+                "create-user invoked",
+                "email" to input.email,
+            )
             UserValidator.validUser(input).bind()
-            userRepository
-                .findByEmail(input.email)
-                .bind()
-                ?.let {
-                    raise(CreateUserError.EmailAlreadyExists)
-                }
+            val existing = userRepository.findByEmail(input.email).bind()
+            if (existing is Option.Some) {
+                logger.warn(
+                    "email already exists",
+                    "email" to input.email,
+                )
+                raise(CreateUserError.EmailAlreadyExists)
+            }
             input
                 .toUserEntity()
-                .save()
+                .also {
+                    logger.debug(
+                        "creating user",
+                        "email" to it.email.value,
+                    )
+                }.save()
                 .bind()
         }
 
@@ -37,7 +50,15 @@ class CreateUserUseCase(
         either {
             dbTransaction.runInTransaction {
                 userRepository.save(this@save).bind()
+                logger.info(
+                    "user persisted",
+                    "email" to this@save.email.value,
+                )
                 publisher.publishUserCreatedEvent(this@save).bind()
+                logger.info(
+                    "user created event published",
+                    "email" to this@save.email.value,
+                )
                 this@save.toUserResponse()
             }
         }

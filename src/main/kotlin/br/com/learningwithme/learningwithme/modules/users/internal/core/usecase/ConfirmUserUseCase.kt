@@ -24,12 +24,18 @@ class ConfirmUserUseCase(
 ) : UseCase<ConfirmUserCommand, ConfirmUserError, UserResponse>() {
     override suspend fun invoke(input: ConfirmUserCommand): Either<ConfirmUserError, UserResponse> =
         either {
+            val log = logger.withContext("token" to input.token)
+            log.info("confirm-user invoked")
             val user = userRepository.findByToken(input.token).bind()
+            val userLog = log.withContext("user_id" to user.id.toString(), "email" to user.email.value)
+            userLog.debug("user fetched")
             validStatusToConfirm(user).bind()
             passwordHashing
                 .hashPassword(input.password)
-                .mapLeft { ConfirmUserError.UnexpectedError }
-                .bind()
+                .mapLeft {
+                    userLog.error("error hashing password")
+                    ConfirmUserError.UnexpectedError
+                }.bind()
                 .let {
                     dbTransaction.runInTransaction {
                         val updatedUser =
@@ -40,6 +46,7 @@ class ConfirmUserUseCase(
                                         updatedAt = Instant.now(),
                                     ),
                                 ).bind()
+                        userLog.info("user updated")
                         userRepository
                             .saveUserAuth(
                                 UserAuth(
@@ -49,7 +56,9 @@ class ConfirmUserUseCase(
                                     passwordHash = it,
                                 ),
                             ).bind()
+                        userLog.info("user auth created")
                         publisher.publishUserUpdatedEvent(updatedUser)
+                        userLog.info("user updated event published")
                         updatedUser.toUserResponse()
                     }
                 }

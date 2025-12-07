@@ -1,6 +1,7 @@
 package br.com.learningwithme.learningwithme.modules.users.internal.core.repository
 
 import arrow.core.Either
+import arrow.core.Option
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.UserAuth
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.ConfirmUserError
@@ -13,7 +14,7 @@ interface UserRepository {
 
     suspend fun update(user: User): Either<ConfirmUserError, User>
 
-    suspend fun findByEmail(email: String): Either<CreateUserError, User?>
+    suspend fun findByEmail(email: String): Either<CreateUserError, Option<User>>
 
     suspend fun findByToken(email: String): Either<ConfirmUserError, User>
 }
