@@ -53,12 +53,12 @@ class ConfirmUserUseCase(
 
     private fun createUserAuth(
         updatedUser: User,
-        it: String,
+        passwordHash: String,
     ) = UserAuth(
         userId = updatedUser.id,
         createdAt = Instant.now(),
         email = updatedUser.email.value,
-        passwordHash = it,
+        passwordHash = passwordHash,
     )
 
     private fun updatedUser(user: User) =
