@@ -14,11 +14,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download CI History Artifact
+      - name: Download workflow artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ci-history
-          path: ./artifacts/ci-history
+          path: ./artifacts
 
       - name: Debug artifact files
         run: |
@@ -31,14 +30,14 @@ jobs:
           COVERAGE="n/a"
           MUTATION="n/a"
 
-          HISTORY_JSON="./artifacts/ci-history/history.json"
-          PIT_JSON="./artifacts/ci-history/pit-summary.json"
+          HISTORY_JSON=$(find ./artifacts -type f -name "history.json" | tail -1)
+          PIT_JSON=$(find ./artifacts -type f -name "pit-summary.json" | tail -1)
 
-          if [ -f "$HISTORY_JSON" ]; then
+          if [ -n "$HISTORY_JSON" ] && [ -f "$HISTORY_JSON" ]; then
             COVERAGE=$(sed -n 's/.*"coverage":\([0-9]\+\).*/\1/p' "$HISTORY_JSON" | tail -1)
           fi
 
-          if [ -f "$PIT_JSON" ]; then
+          if [ -n "$PIT_JSON" ] && [ -f "$PIT_JSON" ]; then
             # Expecting keys {"lineCoverage": X, "mutationCoverage": Y}
             MUTATION=$(sed -n 's/.*"mutationCoverage":\([0-9]\+\).*/\1/p' "$PIT_JSON" | tail -1)
           fi
