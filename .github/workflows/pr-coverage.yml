@@ -29,9 +29,14 @@ jobs:
         run: |
           COVERAGE="n/a"
           MUTATION="n/a"
-
-          HISTORY_JSON=$(find ./artifacts -type f -name "history.json" | tail -1)
-          PIT_JSON=$(find ./artifacts -type f -name "pit-summary.json" | tail -1)
+          SRC=$(find ./artifacts -type d -name "ci-history" | head -1)
+          if [ -n "$SRC" ] && [ -d "$SRC" ]; then
+            cp -r "$SRC"/* ./ci-history/
+          else
+            echo "No ci-history artifact found" && ls -R ./artifacts || true
+          fi
+          HISTORY_JSON=$(find ./ci-history/ -type f -name "history.json" | tail -1)
+          PIT_JSON=$(find ./ci-history/ -type f -name "pit-summary.json" | tail -1)
 
           if [ -n "$HISTORY_JSON" ] && [ -f "$HISTORY_JSON" ]; then
             COVERAGE=$(sed -n 's/.*"coverage":\([0-9]\+\).*/\1/p' "$HISTORY_JSON" | tail -1)
