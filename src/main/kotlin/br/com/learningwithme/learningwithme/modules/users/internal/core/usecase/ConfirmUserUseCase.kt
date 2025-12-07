@@ -25,12 +25,24 @@ class ConfirmUserUseCase(
 ) : UseCase<ConfirmUserCommand, ConfirmUserError, UserResponse>() {
     override suspend fun invoke(input: ConfirmUserCommand): Either<ConfirmUserError, UserResponse> =
         either {
+            logger.info(
+                "confirm-user invoked",
+                "token" to input.token,
+            )
             val user = userRepository.findByToken(input.token).bind()
+            logger.debug(
+                "user fetched",
+                "user_id" to user.id.toString(),
+                "email" to user.email.value,
+            )
             validStatusToConfirm(user).bind()
             passwordHashing
                 .hashPassword(input.password)
                 .mapLeft {
-                    logger.error("Error hashing password for userId=${user.id}")
+                    logger.error(
+                        "error hashing password",
+                        "user_id" to user.id.toString(),
+                    )
                     ConfirmUserError.UnexpectedError
                 }.bind()
                 .let {
@@ -39,12 +51,27 @@ class ConfirmUserUseCase(
                             .update(
                                 updatedUser(user),
                             ).bind()
-                            .let { updatedUser ->
+                            .let { updated ->
+                                logger.info(
+                                    "user updated",
+                                    "user_id" to updated.id.toString(),
+                                    "email" to updated.email.value,
+                                )
+                                updated
+                            }.let { updatedUser ->
                                 userRepository
                                     .saveUserAuth(
                                         createUserAuth(updatedUser, it),
                                     ).bind()
+                                logger.info(
+                                    "user auth created",
+                                    "user_id" to updatedUser.id.toString(),
+                                )
                                 publisher.publishUserUpdatedEvent(updatedUser)
+                                logger.info(
+                                    "user updated event published",
+                                    "user_id" to updatedUser.id.toString(),
+                                )
                                 updatedUser.toUserResponse()
                             }
                     }
