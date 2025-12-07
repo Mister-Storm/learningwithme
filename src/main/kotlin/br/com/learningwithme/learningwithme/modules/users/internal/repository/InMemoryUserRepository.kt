@@ -1,8 +1,6 @@
 package br.com.learningwithme.learningwithme.modules.users.internal.repository
 
 import arrow.core.Either
-import arrow.core.Option
-import arrow.core.toOption
 import arrow.core.left
 import arrow.core.raise.either
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
@@ -53,9 +51,9 @@ class InMemoryUserRepository : UserRepository {
             user
         }
 
-    override suspend fun findByEmail(email: String): Either<CreateUserError, Option<User>> =
+    override suspend fun findByEmail(email: String): Either<CreateUserError, User?> =
         either {
-            users[email].toOption()
+            users[email]
         }
 
     override suspend fun findByToken(token: String): Either<ConfirmUserError, User> =

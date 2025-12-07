@@ -1,9 +1,7 @@
 package br.com.learningwithme.learningwithme.modules.users.internal.core.usecase
 
 import arrow.core.Either
-import arrow.core.Option
 import arrow.core.raise.either
-import arrow.core.toOption
 import br.com.learningwithme.learningwithme.modules.shared.api.UseCase
 import br.com.learningwithme.learningwithme.modules.users.internal.core.command.CreateUserCommand
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
@@ -27,14 +25,17 @@ class CreateUserUseCase(
                 "email" to input.email,
             )
             UserValidator.validUser(input).bind()
-            val existing = userRepository.findByEmail(input.email).bind()
-            if (existing is Option.Some) {
-                logger.warn(
-                    "email already exists",
-                    "email" to input.email,
-                )
-                raise(CreateUserError.EmailAlreadyExists)
-            }
+            userRepository
+                .findByEmail(input.email)
+                .bind()
+                ?.let {
+                    logger.warn(
+                        "email already exists",
+                        "email" to input.email,
+                    )
+                    raise(CreateUserError.EmailAlreadyExists)
+                }
+
             input
                 .toUserEntity()
                 .also {

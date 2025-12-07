@@ -6,6 +6,7 @@ import br.com.learningwithme.learningwithme.modules.shared.api.UseCase
 import br.com.learningwithme.learningwithme.modules.users.internal.core.adapter.PasswordHashingAdapter
 import br.com.learningwithme.learningwithme.modules.users.internal.core.command.ConfirmUserCommand
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.Status
+import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.UserAuth
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.ConfirmUserError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.publisher.UserEventProducer
@@ -63,4 +64,20 @@ class ConfirmUserUseCase(
                     }
                 }
         }
+
+    private fun createUserAuth(
+        updatedUser: User,
+        passwordHash: String,
+    ) = UserAuth(
+        userId = updatedUser.id,
+        createdAt = Instant.now(),
+        email = updatedUser.email.value,
+        passwordHash = passwordHash,
+    )
+
+    private fun updatedUser(user: User) =
+        user.copy(
+            status = Status.ENABLED,
+            updatedAt = Instant.now(),
+        )
 }

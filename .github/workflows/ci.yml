@@ -57,6 +57,8 @@ jobs:
       - name: Extract Jacoco Coverage %
         id: jacoco_extract
         run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
           set -e
           REPORT="build/reports/jacoco/jacocoMergedReport/xml/report.xml"
           if [ -f "$REPORT" ]; then
