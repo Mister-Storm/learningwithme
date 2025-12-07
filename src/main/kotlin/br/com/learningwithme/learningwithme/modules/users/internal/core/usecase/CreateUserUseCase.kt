@@ -20,24 +20,42 @@ class CreateUserUseCase(
 ) : UseCase<CreateUserCommand, CreateUserError, UserResponse>() {
     override suspend fun invoke(input: CreateUserCommand): Either<CreateUserError, UserResponse> =
         either {
+            logger.info(
+                "create-user invoked",
+                "email" to input.email,
+            )
             UserValidator.validUser(input).bind()
             userRepository
                 .findByEmail(input.email)
                 .bind()
                 ?.let {
+                    logger.warn(
+                        "email already exists",
+                        "email" to input.email,
+                    )
                     raise(CreateUserError.EmailAlreadyExists)
                 }
-            input
-                .toUserEntity()
-                .save()
-                .bind()
+            val entity = input.toUserEntity()
+            logger.debug(
+                "creating user",
+                "email" to entity.email.value,
+            )
+            entity.save().bind()
         }
 
     private suspend fun User.save(): Either<CreateUserError, UserResponse> =
         either {
             dbTransaction.runInTransaction {
                 userRepository.save(this@save).bind()
+                logger.info(
+                    "user persisted",
+                    "email" to this@save.email.value,
+                )
                 publisher.publishUserCreatedEvent(this@save).bind()
+                logger.info(
+                    "user created event published",
+                    "email" to this@save.email.value,
+                )
                 this@save.toUserResponse()
             }
         }

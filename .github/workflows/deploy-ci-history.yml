@@ -16,15 +16,26 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Download CI history artifact
+      - name: Download workflow artifacts
         uses: actions/download-artifact@v4
         with:
-          path: /ci-history/*
+          path: ./artifacts
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Prepare CI History for Pages
+        run: |
+          set -e
+          mkdir -p ./ci-history
+          SRC=$(find ./artifacts -type d -name "ci-history" | head -1)
+          if [ -n "$SRC" ] && [ -d "$SRC" ]; then
+            cp -r "$SRC"/* ./ci-history/
+          else
+            echo "No ci-history artifact found" && ls -R ./artifacts || true
+          fi
+
       - name: Upload to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: /ci-history/*
+          path: ./ci-history
