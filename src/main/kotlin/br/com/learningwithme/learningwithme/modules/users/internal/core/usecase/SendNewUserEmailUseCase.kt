@@ -15,11 +15,8 @@ class SendNewUserEmailUseCase(
 ) : UseCase<User, SendEmailError, Unit>() {
     override suspend fun invoke(input: User): Either<SendEmailError, Unit> =
         either {
-            logger.info(
-                "send-new-user-email invoked",
-                "user_id" to input.id.toString(),
-                "email" to input.email.value,
-            )
+            val log = logger.withContext("user_id" to input.id.toString(), "email" to input.email.value)
+            log.info("send-new-user-email invoked")
             emailSender
                 .sendEmail(
                     to = listOf(input.email.value),
@@ -27,10 +24,6 @@ class SendNewUserEmailUseCase(
                     body = NEW_USER_BODY.format(emailLink.format(input.token)),
                     attachment = null,
                 ).bind()
-            logger.info(
-                "new user email sent",
-                "user_id" to input.id.toString(),
-                "email" to input.email.value,
-            )
+            log.info("new user email sent")
         }
 }

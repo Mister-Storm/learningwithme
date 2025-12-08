@@ -25,55 +25,42 @@ class ConfirmUserUseCase(
 ) : UseCase<ConfirmUserCommand, ConfirmUserError, UserResponse>() {
     override suspend fun invoke(input: ConfirmUserCommand): Either<ConfirmUserError, UserResponse> =
         either {
-            logger.info(
-                "confirm-user invoked",
-                "token" to input.token,
-            )
+            val log = logger.withContext("token" to input.token)
+            log.info("confirm-user invoked")
             val user = userRepository.findByToken(input.token).bind()
-            logger.debug(
-                "user fetched",
-                "user_id" to user.id.toString(),
-                "email" to user.email.value,
-            )
+            val userLog = log.withContext("user_id" to user.id.toString(), "email" to user.email.value)
+            userLog.debug("user fetched")
             validStatusToConfirm(user).bind()
             passwordHashing
                 .hashPassword(input.password)
                 .mapLeft {
-                    logger.error(
-                        "error hashing password",
-                        "user_id" to user.id.toString(),
-                    )
+                    userLog.error("error hashing password")
                     ConfirmUserError.UnexpectedError
                 }.bind()
                 .let {
                     dbTransaction.runInTransaction {
+                        val updatedUser =
+                            userRepository
+                                .update(
+                                    user.copy(
+                                        status = Status.ENABLED,
+                                        updatedAt = Instant.now(),
+                                    ),
+                                ).bind()
+                        userLog.info("user updated")
                         userRepository
-                            .update(
-                                updatedUser(user),
+                            .saveUserAuth(
+                                UserAuth(
+                                    userId = updatedUser.id,
+                                    createdAt = Instant.now(),
+                                    email = updatedUser.email.value,
+                                    passwordHash = it,
+                                ),
                             ).bind()
-                            .let { updated ->
-                                logger.info(
-                                    "user updated",
-                                    "user_id" to updated.id.toString(),
-                                    "email" to updated.email.value,
-                                )
-                                updated
-                            }.let { updatedUser ->
-                                userRepository
-                                    .saveUserAuth(
-                                        createUserAuth(updatedUser, it),
-                                    ).bind()
-                                logger.info(
-                                    "user auth created",
-                                    "user_id" to updatedUser.id.toString(),
-                                )
-                                publisher.publishUserUpdatedEvent(updatedUser)
-                                logger.info(
-                                    "user updated event published",
-                                    "user_id" to updatedUser.id.toString(),
-                                )
-                                updatedUser.toUserResponse()
-                            }
+                        userLog.info("user auth created")
+                        publisher.publishUserUpdatedEvent(updatedUser)
+                        userLog.info("user updated event published")
+                        updatedUser.toUserResponse()
                     }
                 }
         }
