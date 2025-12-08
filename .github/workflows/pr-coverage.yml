@@ -19,11 +19,6 @@ jobs:
         with:
           path: ./artifacts
 
-      - name: Debug artifact files
-        run: |
-          echo "=== Downloaded artifact ==="
-          find ./artifacts -type f
-
       - name: Parse coverage & mutation results
         id: parse
         run: |
