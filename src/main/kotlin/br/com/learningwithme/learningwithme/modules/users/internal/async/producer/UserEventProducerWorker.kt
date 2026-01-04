@@ -2,6 +2,7 @@ package br.com.learningwithme.learningwithme.modules.users.internal.async.produc
 
 import arrow.core.Either.Left
 import arrow.core.Either.Right
+import br.com.learningwithme.learningwithme.modules.users.internal.async.producer.support.extensions.toUserEvent
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.UserOutbox
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.OutboxError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.repository.UserOutboxRepository
@@ -33,7 +34,7 @@ open class UserEventProducerWorker(
 
         pending.forEach { outbox: UserOutbox ->
             runCatching {
-                eventPublisher.publishEvent(outbox.toPublished())
+                eventPublisher.publishEvent(outbox.toUserEvent())
                 userOutboxRepository.save(outbox.toPublished())
             }.onFailure { throwable ->
                 logger.error("Failed to publish user event {}", outbox.id, throwable)

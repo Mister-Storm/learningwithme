@@ -9,4 +9,14 @@ object UserOutboxFixture {
             user = UserFixture.DEFAULT_USER,
             event = Event.CREATED,
         )
+    val USER_OUTBOX_UPDATED =
+        UserOutbox(
+            user = UserFixture.DEFAULT_USER,
+            event = Event.UPDATED,
+        )
+    val USER_OUTBOX_DELETED =
+        UserOutbox(
+            user = UserFixture.DEFAULT_USER,
+            event = Event.DELETED,
+        )
 }
