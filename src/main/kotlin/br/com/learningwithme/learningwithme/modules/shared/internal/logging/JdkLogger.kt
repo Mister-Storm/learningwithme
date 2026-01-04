@@ -5,6 +5,7 @@ import java.util.logging.Logger as JdkLoggerImpl
 
 class JdkLogger(
     private val delegate: JdkLoggerImpl,
+    private val baseContext: Map<String, String> = emptyMap(),
 ) : Logger {
     override fun debug(
         message: String,
@@ -34,6 +35,11 @@ class JdkLogger(
         log(Level.SEVERE, message, context)
     }
 
+    override fun withContext(vararg context: Pair<String, String>): Logger {
+        val merged = baseContext + context.toMap()
+        return JdkLogger(delegate, merged)
+    }
+
     private fun log(
         level: Level,
         message: String,
@@ -42,11 +48,12 @@ class JdkLogger(
         if (!delegate.isLoggable(level)) {
             return
         }
+        val ctxMap = baseContext + context.toMap()
         val ctx =
-            if (context.isNotEmpty()) {
-                context.joinToString(
+            if (ctxMap.isNotEmpty()) {
+                ctxMap.entries.joinToString(
                     separator = ", ",
-                ) { "${it.first}=${it.second}" }
+                ) { "${it.key}=${it.value}" }
             } else {
                 ""
             }

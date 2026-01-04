@@ -4,12 +4,12 @@ import java.util.UUID
 
 data class UserOutbox(
     val id: UUID = UUID.randomUUID(),
-    val userEvent: UserEvent,
+    val event: Event,
     val user: User,
     val isPublished: Boolean = false,
 )
 
-enum class UserEvent {
+enum class Event {
     CREATED,
     UPDATED,
     DELETED,

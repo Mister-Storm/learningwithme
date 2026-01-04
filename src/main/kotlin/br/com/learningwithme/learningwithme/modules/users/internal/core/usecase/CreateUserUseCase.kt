@@ -35,12 +35,16 @@ class CreateUserUseCase(
                     )
                     raise(CreateUserError.EmailAlreadyExists)
                 }
-            val entity = input.toUserEntity()
-            logger.debug(
-                "creating user",
-                "email" to entity.email.value,
-            )
-            entity.save().bind()
+
+            input
+                .toUserEntity()
+                .also {
+                    logger.debug(
+                        "creating user",
+                        "email" to it.email.value,
+                    )
+                }.save()
+                .bind()
         }
 
     private suspend fun User.save(): Either<CreateUserError, UserResponse> =

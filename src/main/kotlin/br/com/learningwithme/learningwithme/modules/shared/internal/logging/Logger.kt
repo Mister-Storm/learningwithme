@@ -20,4 +20,6 @@ interface Logger {
         message: String,
         vararg context: Pair<String, String>,
     )
+
+    fun withContext(vararg context: Pair<String, String>): Logger
 }
