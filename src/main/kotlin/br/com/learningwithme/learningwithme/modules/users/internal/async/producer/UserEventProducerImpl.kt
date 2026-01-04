@@ -3,8 +3,8 @@ package br.com.learningwithme.learningwithme.modules.users.internal.async.produc
 import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.right
+import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.Event
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
-import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.UserEvent
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.UserOutbox
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.CreateUserError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.publisher.UserEventProducer
@@ -21,7 +21,7 @@ class UserEventProducerImpl(
                 .save(
                     UserOutbox(
                         user = user,
-                        userEvent = UserEvent.CREATED,
+                        event = Event.CREATED,
                     ),
                 ).mapLeft { CreateUserError.PersistenceFailure(it.reason) }
                 .bind()

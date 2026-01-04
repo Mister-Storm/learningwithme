@@ -1,7 +1,7 @@
 package br.com.learningwithme.learningwithme.modules.users.internal.async.producer
 
+import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.Event
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.User
-import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.UserEvent
 import br.com.learningwithme.learningwithme.modules.users.internal.core.entity.UserOutbox
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.CreateUserError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.repository.UserOutboxRepository
@@ -31,7 +31,7 @@ class UserEventProducerImplTest {
             assertAll(
                 { assertTrue(result.isRight()) },
                 { verify(exactly = 1) { repository.save(capture(captor)) } },
-                { assertEquals(UserEvent.CREATED, captor.captured.userEvent) },
+                { assertEquals(Event.CREATED, captor.captured.event) },
                 { assertSame(user, captor.captured.user) },
                 { assertFalse(captor.captured.isPublished) },
             )

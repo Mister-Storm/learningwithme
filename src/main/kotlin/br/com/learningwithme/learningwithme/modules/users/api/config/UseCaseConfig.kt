@@ -12,9 +12,9 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-class UseCaseConfig {
+open class UseCaseConfig {
     @Bean
-    fun createUserUseCase(
+    open fun createUserUseCase(
         userRepository: UserRepository,
         publisher: UserEventProducer,
         dbTransaction: DbTransaction,
