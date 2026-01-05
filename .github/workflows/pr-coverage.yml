@@ -14,33 +14,65 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download workflow artifacts
+      - name: Extract PR number from workflow_run
+        id: pr
+        run: |
+          set -e
+          PR_JSON='${{ toJson(github.event.workflow_run.pull_requests) }}'
+          node -e "const prs = JSON.parse(process.env.PR_JSON); console.log('pr_number=' + prs[0].number);" >> $GITHUB_OUTPUT
+        env:
+          PR_JSON: ${{ toJson(github.event.workflow_run.pull_requests) }}
+
+      - name: Download CI history artifact
         uses: actions/download-artifact@v4
         with:
-          path: ./artifacts
+          name: ci-history
+          run-id: ${{ github.event.workflow_run.id }}
+          path: ./ci-history-artifact
 
       - name: Parse coverage & mutation results
         id: parse
         run: |
+          set -e
           COVERAGE="n/a"
           MUTATION="n/a"
-          SRC=$(find ./artifacts -type d -name "ci-history" | head -1)
-          if [ -n "$SRC" ] && [ -d "$SRC" ]; then
-            cp -r "$SRC"/* ./ci-history/
+
+          echo "Listing downloaded ci-history-artifact (debug):"
+          ls -R ./ci-history-artifact || echo "ci-history-artifact not found"
+
+          # O upload do CI faz `path: ${{ github.workspace }}/ci-history`,
+          # então o artifact terá os arquivos direto na raiz.
+          if [ -d ./ci-history-artifact ]; then
+            mkdir -p ./ci-history
+            cp -a ./ci-history-artifact/. ./ci-history/
+            echo "Copied artifact contents to ./ci-history"
           else
-            echo "No ci-history artifact found" && ls -R ./artifacts || true
+            echo "No ci-history artifact found"
           fi
-          HISTORY_JSON=$(find ./ci-history/ -type f -name "history.json" | tail -1)
-          PIT_JSON=$(find ./ci-history/ -type f -name "pit-summary.json" | tail -1)
+
+          echo "Listing ./ci-history (debug):"
+          ls -R ./ci-history || true
+
+          HISTORY_JSON=$(find ./ci-history -maxdepth 2 -type f -name "history.json" | head -1 || true)
+          PIT_JSON=$(find ./ci-history -maxdepth 2 -type f -name "pit-summary.json" | head -1 || true)
+
+          echo "HISTORY_JSON path: $HISTORY_JSON"
+          echo "PIT_JSON path: $PIT_JSON"
 
           if [ -n "$HISTORY_JSON" ] && [ -f "$HISTORY_JSON" ]; then
-            COVERAGE=$(sed -n 's/.*"coverage":\([0-9]\+\).*/\1/p' "$HISTORY_JSON" | tail -1)
+            COVERAGE=$(sed -n 's/.*"coverage":\([0-9]\+\).*/\1/p' "$HISTORY_JSON" | head -1)
+          else
+            echo "WARN: history.json not found in ci-history. JaCoCo coverage will be 'n/a'."
           fi
 
           if [ -n "$PIT_JSON" ] && [ -f "$PIT_JSON" ]; then
-            # Expecting keys {"lineCoverage": X, "mutationCoverage": Y}
-            MUTATION=$(sed -n 's/.*"mutationCoverage":\([0-9]\+\).*/\1/p' "$PIT_JSON" | tail -1)
+            MUTATION=$(sed -n 's/.*"mutationCoverage":\([0-9]\+\).*/\1/p' "$PIT_JSON" | head -1)
+          else
+            echo "WARN: pit-summary.json not found in ci-history. Mutation coverage will be 'n/a'."
           fi
+
+          echo "Parsed COVERAGE=$COVERAGE"
+          echo "Parsed MUTATION=$MUTATION"
 
           echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
           echo "mutation=$MUTATION" >> $GITHUB_OUTPUT
@@ -48,6 +80,7 @@ jobs:
       - name: Comment coverage summary on PR
         uses: marocchino/sticky-pull-request-comment@v2
         with:
+          number: ${{ steps.pr.outputs.pr_number }}
           recreate: true
           message: |
             ## 📊 CI Coverage Summary
