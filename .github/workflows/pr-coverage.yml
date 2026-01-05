@@ -19,6 +19,7 @@ jobs:
         with:
           name: ci-history
           path: ./ci-history-artifact
+          run-id: ${{ github.event.workflow_run.id }}
 
       - name: Parse coverage & mutation results
         id: parse
@@ -30,13 +31,13 @@ jobs:
           echo "Listing downloaded ci-history-artifact (debug):"
           ls -R ./ci-history-artifact || echo "ci-history-artifact not found"
 
-          SRC=$(find ./ci-history-artifact -maxdepth 2 -type d -name "ci-history" | head -1)
-          if [ -n "$SRC" ] && [ -d "$SRC" ]; then
-            echo "Found ci-history directory at $SRC"
+          # Copy files directly from the artifact path
+          if [ -d ./ci-history-artifact ]; then
             mkdir -p ./ci-history
-            cp -r "$SRC"/* ./ci-history/
+            cp -a ./ci-history-artifact/. ./ci-history/
+            echo "Copied artifact contents to ./ci-history"
           else
-            echo "No ci-history artifact folder found"
+            echo "No ci-history artifact found"
           fi
 
           echo "Listing ./ci-history (debug):"
