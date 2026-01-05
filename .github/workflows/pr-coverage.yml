@@ -19,6 +19,7 @@ jobs:
         with:
           name: ci-history
           path: ./ci-history-artifact
+          run-id: ${{ github.event.workflow_run.id }}
 
       - name: Parse coverage & mutation results
         id: parse
