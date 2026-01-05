@@ -20,6 +20,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ci-history
+          run-id: ${{ github.event.workflow_run.id }}
           path: ./artifacts
 
       - name: Setup Pages
