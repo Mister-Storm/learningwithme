@@ -16,9 +16,10 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Download workflow artifacts
+      - name: Download CI history artifact
         uses: actions/download-artifact@v4
         with:
+          name: ci-history
           path: ./artifacts
 
       - name: Setup Pages
