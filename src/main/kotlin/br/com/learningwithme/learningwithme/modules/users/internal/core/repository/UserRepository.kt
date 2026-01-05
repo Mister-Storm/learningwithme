@@ -15,5 +15,5 @@ interface UserRepository {
 
     suspend fun findByEmail(email: String): Either<CreateUserError, User?>
 
-    suspend fun findByToken(email: String): Either<ConfirmUserError, User>
+    suspend fun findByToken(token: String): Either<ConfirmUserError, User>
 }

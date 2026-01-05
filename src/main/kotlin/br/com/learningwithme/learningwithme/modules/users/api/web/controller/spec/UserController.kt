@@ -3,6 +3,8 @@ package br.com.learningwithme.learningwithme.modules.users.api.web.controller.sp
 import br.com.learningwithme.learningwithme.modules.users.api.web.controller.request.ConfirmUserRequest
 import br.com.learningwithme.learningwithme.modules.users.api.web.controller.request.CreateUSerRequest
 import br.com.learningwithme.learningwithme.modules.users.api.web.controller.response.UserResponse
+import jakarta.validation.Valid
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -12,11 +14,13 @@ import org.springframework.web.bind.annotation.RequestMapping
 interface UserController {
     @PostMapping
     fun createUser(
+        @Valid
         @RequestBody request: CreateUSerRequest,
-    ): UserResponse
+    ): ResponseEntity<UserResponse>
 
     @PatchMapping
     fun confirmUser(
+        @Valid
         @RequestBody request: ConfirmUserRequest,
-    ): UserResponse
+    ): ResponseEntity<UserResponse>
 }
