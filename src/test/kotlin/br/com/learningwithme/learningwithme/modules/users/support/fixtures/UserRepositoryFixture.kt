@@ -20,11 +20,11 @@ object UserRepositoryFixture {
         }
     val WITH_TOKEN_NOT_FOUND: UserRepository =
         object : DefaultFixture() {
-            override suspend fun findByToken(email: String): Either<ConfirmUserError, User> = Either.Left(ConfirmUserError.UserNotFound)
+            override suspend fun findByToken(token: String): Either<ConfirmUserError, User> = Either.Left(ConfirmUserError.UserNotFound)
         }
     val WITH_USER_ALREADY_CONFIRMED: UserRepository =
         object : DefaultFixture() {
-            override suspend fun findByToken(email: String): Either<ConfirmUserError, User> =
+            override suspend fun findByToken(token: String): Either<ConfirmUserError, User> =
                 Either.Right(
                     USER_CONFIRMED,
                 )
@@ -39,6 +39,6 @@ object UserRepositoryFixture {
 
         override suspend fun findByEmail(email: String): Either<CreateUserError, User?> = Either.Right(null)
 
-        override suspend fun findByToken(email: String): Either<ConfirmUserError, User> = Either.Right(DEFAULT_USER)
+        override suspend fun findByToken(token: String): Either<ConfirmUserError, User> = Either.Right(DEFAULT_USER)
     }
 }
