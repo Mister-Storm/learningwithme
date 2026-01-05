@@ -108,19 +108,22 @@ jobs:
         continue-on-error: true
 
       - name: Prepare CI History folder
+        id: prepare-history
         run: |
           set -e
           mkdir -p ci-history
           if [ -d ".ci-history" ] && find .ci-history -type f | grep -q .; then
             echo "Found CI history files in .ci-history, copying to ci-history/"
             cp -r .ci-history/* ci-history/
+            echo "has-files=true" >> $GITHUB_OUTPUT
           else
             echo "WARNING: .ci-history is missing or empty; no history.json / pit-summary.json to upload."
             ls -R .ci-history || echo ".ci-history does not exist"
+            echo "has-files=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload CI History Artifact
-        if: ${{ hashFiles('ci-history/**') != '' }}
+        if: steps.prepare-history.outputs.has-files == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ci-history
