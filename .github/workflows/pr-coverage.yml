@@ -34,7 +34,7 @@ jobs:
           if [ -n "$SRC" ] && [ -d "$SRC" ]; then
             echo "Found ci-history directory at $SRC"
             mkdir -p ./ci-history
-            cp -r "$SRC"/* ./ci-history/
+            cp -a "$SRC"/. ./ci-history/
           else
             echo "No ci-history artifact folder found"
           fi
