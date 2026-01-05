@@ -12,11 +12,13 @@ import br.com.learningwithme.learningwithme.modules.users.internal.core.command.
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.ConfirmUserError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.CreateUserError
 import br.com.learningwithme.learningwithme.modules.users.internal.core.errors.CreateUserError.PersistenceFailure
+import jakarta.validation.Valid
 import kotlinx.coroutines.runBlocking
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder
@@ -28,7 +30,9 @@ class UserControllerImpl(
     private val confirmUserUseCase: UseCase<ConfirmUserCommand, ConfirmUserError, DomainUserResponse>,
 ) : UserController {
     @PostMapping
-    override fun createUser(request: CreateUSerRequest): ResponseEntity<UserResponse> =
+    override fun createUser(
+        @Valid @RequestBody request: CreateUSerRequest,
+    ): ResponseEntity<UserResponse> =
         runBlocking {
             when (val result = createUserUseCase(request.toCommand())) {
                 is arrow.core.Either.Right -> {
@@ -56,7 +60,9 @@ class UserControllerImpl(
         }
 
     @PatchMapping
-    override fun confirmUser(request: ConfirmUserRequest): ResponseEntity<UserResponse> =
+    override fun confirmUser(
+        @Valid @RequestBody request: ConfirmUserRequest,
+    ): ResponseEntity<UserResponse> =
         runBlocking {
             when (val result = confirmUserUseCase(request.toCommand())) {
                 is arrow.core.Either.Right -> ResponseEntity.ok(result.value.toWebResponse())

@@ -6,6 +6,7 @@ import br.com.learningwithme.learningwithme.modules.users.internal.core.reposito
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.test.context.DynamicPropertyRegistry
@@ -22,6 +23,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
 @SpringBootTest
+@AutoConfigureMockMvc
 class UserControllerIT {
     companion object {
         @Container
@@ -57,7 +59,7 @@ class UserControllerIT {
             CreateUSerRequest(
                 email = "john.doe@example.com",
                 firstName = "John",
-                documentNumber = "12345678901",
+                documentNumber = "52998224725",
                 documentType = "CPF",
                 lastName = "Doe",
                 street = "Street 1",
@@ -76,7 +78,7 @@ class UserControllerIT {
                     .content(objectMapper.writeValueAsString(request)),
             ).andExpect(status().isCreated)
             .andExpect(header().exists("Location"))
-            .andExpect(jsonPath("$.email.value").value(request.email))
+            .andExpect(jsonPath("$.email").value(request.email))
     }
 
     @Test
@@ -85,7 +87,7 @@ class UserControllerIT {
             CreateUSerRequest(
                 email = "conflict@example.com",
                 firstName = "John",
-                documentNumber = "12345678901",
+                documentNumber = "52998224725",
                 documentType = "CPF",
                 lastName = "Doe",
                 street = "Street 1",
@@ -118,7 +120,7 @@ class UserControllerIT {
             CreateUSerRequest(
                 email = "confirm.success@example.com",
                 firstName = "Jane",
-                documentNumber = "12345678901",
+                documentNumber = "52998224725",
                 documentType = "CPF",
                 lastName = "Doe",
                 street = "Street 1",
@@ -135,7 +137,7 @@ class UserControllerIT {
                 post("/users")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(createRequest)),
-            ).andExpect(status().isOk)
+            ).andExpect(status().isCreated)
 
         val user =
             kotlinx.coroutines.runBlocking {
@@ -172,7 +174,7 @@ class UserControllerIT {
             CreateUSerRequest(
                 email = "invalid-email",
                 firstName = "John",
-                documentNumber = "12345678901",
+                documentNumber = "52998224725",
                 documentType = "CPF",
                 lastName = "Doe",
                 street = "Street 1",
@@ -289,7 +291,7 @@ class UserControllerIT {
             CreateUSerRequest(
                 email = "already.confirmed@example.com",
                 firstName = "Jane",
-                documentNumber = "12345678901",
+                documentNumber = "52998224725",
                 documentType = "CPF",
                 lastName = "Doe",
                 street = "Street 1",

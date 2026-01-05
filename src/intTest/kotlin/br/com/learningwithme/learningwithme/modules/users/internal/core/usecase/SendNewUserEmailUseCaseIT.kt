@@ -68,7 +68,7 @@ class SendNewUserEmailUseCaseIT {
                 document =
                     Document(
                         documentType = DocumentType.CPF,
-                        value = "12345678901",
+                        value = "52998224725",
                     ),
                 firstName = "Test",
                 lastName = "User",
